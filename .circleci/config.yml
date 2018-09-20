@@ -1,0 +1,47 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  test:
+    docker:
+      - image: golang:1.11-alpine
+    branches:
+      only:
+        - master
+    working_directory: /go/src/github.com/kpango/fastime
+    steps:
+      - checkout
+      - run: 
+          name: install dependency
+          command: |
+            dep ensure
+      - run: 
+          name: download reviewdog
+          command: |
+              curl -fSL https://github.com/haya14busa/reviewdog/releases/download/$REVIEWDOG_VERSION/reviewdog_linux_amd64 -o reviewdog && chmod +x ./reviewdog
+      - run: 
+          name: review
+          command: |
+            ./reviewdog -ci="circle-ci" -conf=.reviewdog.yml
+      - run:
+          name: get gotestcover
+          command: |
+              go get github.com/pierrre/gotestcover
+      - run:
+          name: test coverprofile
+          command: |
+              gotestcover -coverprofile=coverage.txt ./...
+      - run:
+          name: send coverprofile
+          command: |
+              bash <(curl -s https://codecov.io/bash)
+  benchmark:
+    docker:
+      - image: golang:1.11-alpine
+    working_directory: /go/src/github.com/kpango/fastime
+    steps:
+      - checkout
+      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+      - run: dep ensure
+      - run: make bench
