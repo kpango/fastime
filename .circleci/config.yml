@@ -3,31 +3,35 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2
 jobs:
-  test:
+  build:
     docker:
       - image: golang:1.11-alpine
+        environment:
+            CODECOV_TOKEN: bc717d94-4d1f-4909-9f6c-edc8163c555a
     branches:
       only:
         - master
     working_directory: /go/src/github.com/kpango/fastime
     steps:
       - checkout
+      - run:
+          name: init deps
+          command: |
+              apk add git curl make bash
       - run: 
           name: install dependency
           command: |
-            dep ensure
-      - run: 
-          name: download reviewdog
-          command: |
-              curl -fSL https://github.com/haya14busa/reviewdog/releases/download/$REVIEWDOG_VERSION/reviewdog_linux_amd64 -o reviewdog && chmod +x ./reviewdog
-      - run: 
-          name: review
-          command: |
-            ./reviewdog -ci="circle-ci" -conf=.reviewdog.yml
+              go get -u github.com/golang/dep/cmd/dep
+              make deps
+      # - run: 
+      #     name: review
+      #     command: |
+      #         go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
+      #         reviewdog -conf=.reviewdog.yml
       - run:
           name: get gotestcover
           command: |
-              go get github.com/pierrre/gotestcover
+              go get -u github.com/pierrre/gotestcover
       - run:
           name: test coverprofile
           command: |
@@ -35,13 +39,15 @@ jobs:
       - run:
           name: send coverprofile
           command: |
-              bash <(curl -s https://codecov.io/bash)
-  benchmark:
-    docker:
-      - image: golang:1.11-alpine
-    working_directory: /go/src/github.com/kpango/fastime
-    steps:
-      - checkout
-      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-      - run: dep ensure
-      - run: make bench
+              curl -s https://codecov.io/bash > .codecov
+              chmod +x .codecov
+              ./.codecov -f coverage.txt -t bc717d94-4d1f-4909-9f6c-edc8163c555a
+  # benchmark:
+  #   docker:
+  #     - image: golang:1.11-alpine
+  #   working_directory: /go/src/github.com/kpango/fastime
+  #   steps:
+  #     - checkout
+  #     - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  #     - run: dep ensure
+  #     - run: make bench

@@ -15,6 +15,9 @@ profile:
 	rm -rf pprof
 	mkdir pprof
 
+deps:
+	dep init
+
 test:
 	go test -v ./...
 
