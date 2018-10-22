@@ -11,6 +11,7 @@ import (
 type Fastime struct {
 	t      atomic.Value
 	cancel context.CancelFunc
+	ticker *time.Ticker
 }
 
 var (
@@ -30,12 +31,14 @@ func New(ctx context.Context) *Fastime {
 	f.t.Store(time.Now())
 	var ct context.Context
 	ct, f.cancel = context.WithCancel(ctx)
+	f.ticker = time.NewTicker(time.Millisecond * 100)
 	go func() {
 		for {
 			select {
 			case <-ct.Done():
+				f.ticker.Stop()
 				return
-			default:
+			case <-f.ticker.C:
 				f.t.Store(time.Now())
 			}
 		}
@@ -53,6 +56,11 @@ func Stop() {
 	instance.Stop()
 }
 
+// SetDuration changes time refresh duration
+func SetDuration(dur time.Duration) *Fastime {
+	return instance.SetDuration(dur)
+}
+
 // Now returns current time
 func (f *Fastime) Now() time.Time {
 	return f.t.Load().(time.Time)
@@ -61,4 +69,11 @@ func (f *Fastime) Now() time.Time {
 // Stop stops stopping time refresh daemon
 func (f *Fastime) Stop() {
 	f.cancel()
+}
+
+// SetDuration changes time refresh duration
+func (f *Fastime) SetDuration(dur time.Duration) *Fastime {
+	f.ticker.Stop()
+	f.ticker = time.NewTicker(dur)
+	return f
 }
