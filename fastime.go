@@ -12,6 +12,7 @@ type Fastime struct {
 	running bool
 	t       atomic.Value
 	cancel  context.CancelFunc
+	ticker  *time.Ticker
 }
 
 var (
@@ -32,8 +33,42 @@ func New() *Fastime {
 	return f
 }
 
+// Now returns current time
+func Now() time.Time {
+	return instance.Now()
+}
+
+// Stop stops stopping time refresh daemon
+func Stop() {
+	instance.Stop()
+}
+
+// SetDuration changes time refresh duration
+func SetDuration(dur time.Duration) *Fastime {
+	return instance.SetDuration(dur)
+}
+
 func StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	return instance.StartTimerD(ctx, dur)
+}
+
+// Now returns current time
+func (f *Fastime) Now() time.Time {
+	return f.t.Load().(time.Time)
+}
+
+// Stop stops stopping time refresh daemon
+func (f *Fastime) Stop() {
+	f.cancel()
+}
+
+// SetDuration changes time refresh duration
+func (f *Fastime) SetDuration(dur time.Duration) *Fastime {
+	if f.running && f.ticker != nil {
+		f.ticker.Stop()
+	}
+	f.ticker = time.NewTicker(dur)
+	return f
 }
 
 func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
@@ -48,36 +83,17 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 
 	go func() {
 		f.running = true
-		ticker := time.NewTicker(dur)
+		f.ticker = time.NewTicker(dur)
 		for {
 			select {
 			case <-ct.Done():
+				f.ticker.Stop()
 				return
-			case <-ticker.C:
+			case <-f.ticker.C:
 				f.t.Store(time.Now())
 			}
 		}
 	}()
 
 	return f
-}
-
-// Now returns current time
-func Now() time.Time {
-	return instance.Now()
-}
-
-// Stop stops stopping time refresh daemon
-func Stop() {
-	instance.Stop()
-}
-
-// Now returns current time
-func (f *Fastime) Now() time.Time {
-	return f.t.Load().(time.Time)
-}
-
-// Stop stops stopping time refresh daemon
-func (f *Fastime) Stop() {
-	f.cancel()
 }

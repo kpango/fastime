@@ -1,0 +1,53 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      - image: golang:1.11-alpine
+        environment:
+            CODECOV_TOKEN: bc717d94-4d1f-4909-9f6c-edc8163c555a
+    branches:
+      only:
+        - master
+    working_directory: /go/src/github.com/kpango/fastime
+    steps:
+      - checkout
+      - run:
+          name: init deps
+          command: |
+              apk add git curl make bash
+      - run: 
+          name: install dependency
+          command: |
+              go get -u github.com/golang/dep/cmd/dep
+              make deps
+      # - run: 
+      #     name: review
+      #     command: |
+      #         go get -u github.com/haya14busa/reviewdog/cmd/reviewdog
+      #         reviewdog -conf=.reviewdog.yml
+      - run:
+          name: get gotestcover
+          command: |
+              go get -u github.com/pierrre/gotestcover
+      - run:
+          name: test coverprofile
+          command: |
+              gotestcover -coverprofile=coverage.txt ./...
+      - run:
+          name: send coverprofile
+          command: |
+              curl -s https://codecov.io/bash > .codecov
+              chmod +x .codecov
+              ./.codecov -f coverage.txt -t bc717d94-4d1f-4909-9f6c-edc8163c555a
+  # benchmark:
+  #   docker:
+  #     - image: golang:1.11-alpine
+  #   working_directory: /go/src/github.com/kpango/fastime
+  #   steps:
+  #     - checkout
+  #     - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  #     - run: dep ensure
+  #     - run: make bench

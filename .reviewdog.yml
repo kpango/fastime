@@ -1,0 +1,11 @@
+runner:
+  golint:
+    cmd: golint $(go list ./...)
+  megacheck:
+    cmd: megacheck $(go list ./...)
+    errorformat:
+      - "%f:%l:%c:%m"
+  errcheck:
+    cmd: errcheck -asserts -ignoretests -blank $(go list ./...)
+    errorformat:
+      - "%f:%l:%c:%m"
