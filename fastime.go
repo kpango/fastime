@@ -9,8 +9,9 @@ import (
 
 // Fastime is fastime's base struct, it's stores atomic time object
 type Fastime struct {
-	t      atomic.Value
-	cancel context.CancelFunc
+	running bool
+	t       atomic.Value
+	cancel  context.CancelFunc
 }
 
 var (
@@ -20,26 +21,44 @@ var (
 
 func init() {
 	once.Do(func() {
-		instance = New(context.Background())
+		instance = New().StartTimerD(context.Background(), time.Millisecond*100)
 	})
 }
 
 // New returns Fastime
-func New(ctx context.Context) *Fastime {
+func New() *Fastime {
 	f := new(Fastime)
 	f.t.Store(time.Now())
+	return f
+}
+
+func StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
+	return instance.StartTimerD(ctx, dur)
+}
+
+func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
+	if f.running {
+		f.Stop()
+	}
+
 	var ct context.Context
 	ct, f.cancel = context.WithCancel(ctx)
+
+	f.t.Store(time.Now())
+
 	go func() {
+		f.running = true
+		ticker := time.NewTicker(dur)
 		for {
 			select {
 			case <-ct.Done():
 				return
-			default:
+			case <-ticker.C:
 				f.t.Store(time.Now())
 			}
 		}
 	}()
+
 	return f
 }
 
