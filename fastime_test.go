@@ -17,7 +17,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := New(context.Background())
+			f := New().StartTimerD(context.Background(), 10000)
 			time.Sleep(time.Second * 2)
 			if f.Now().Unix() != time.Now().Unix() {
 				t.Error("time is not correct so daemon is not started")
@@ -84,7 +84,7 @@ func TestFastime_Now(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := New(context.Background())
+			f := New().StartTimerD(context.Background(), 10000)
 			if f.Now().Unix() != time.Now().Unix() {
 				t.Error("time is not correct")
 			}
@@ -107,7 +107,7 @@ func TestFastime_Stop(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := New(context.Background())
+			f := New().StartTimerD(context.Background(), 10000)
 			now := f.Now().Unix()
 			if now != time.Now().Unix() {
 				t.Error("time is not correct")
@@ -119,6 +119,94 @@ func TestFastime_Stop(t *testing.T) {
 				t.Error("refresh daemon stopped but time is same")
 			}
 
+		})
+	}
+}
+
+func TestUnixNanoNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "time equality",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if UnixNanoNow() != Now().UnixNano() {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
+
+func TestFastime_UnixNanoNow(t *testing.T) {
+	type fields struct {
+		t      atomic.Value
+		cancel context.CancelFunc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   time.Time
+	}{
+		{
+			name: "time equality",
+		},
+	}
+
+	f := New().StartTimerD(context.Background(), time.Nanosecond)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if f.UnixNanoNow() != f.Now().UnixNano() {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
+
+func TestSetDuration(t *testing.T) {
+	type args struct {
+		dur time.Duration
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Fastime
+	}{
+		{
+			name: "just pass",
+			args: args{
+				dur: time.Second,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetDuration(tt.args.dur)
+		})
+	}
+}
+
+func TestFastime_SetDuration(t *testing.T) {
+	type args struct {
+		dur time.Duration
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Fastime
+	}{
+		{
+			name: "just pass",
+			args: args{
+				dur: time.Second,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			New().SetDuration(tt.args.dur)
 		})
 	}
 }

@@ -9,9 +9,11 @@ import (
 
 // Fastime is fastime's base struct, it's stores atomic time object
 type Fastime struct {
-	t      atomic.Value
-	cancel context.CancelFunc
-	ticker *time.Ticker
+	running bool
+	t       atomic.Value
+	ut      int64
+	cancel  context.CancelFunc
+	ticker  *time.Ticker
 }
 
 var (
@@ -21,28 +23,16 @@ var (
 
 func init() {
 	once.Do(func() {
-		instance = New(context.Background())
+		instance = New().StartTimerD(context.Background(), time.Millisecond*100)
 	})
 }
 
 // New returns Fastime
-func New(ctx context.Context) *Fastime {
+func New() *Fastime {
 	f := new(Fastime)
-	f.t.Store(time.Now())
-	var ct context.Context
-	ct, f.cancel = context.WithCancel(ctx)
-	f.ticker = time.NewTicker(time.Millisecond * 100)
-	go func() {
-		for {
-			select {
-			case <-ct.Done():
-				f.ticker.Stop()
-				return
-			case <-f.ticker.C:
-				f.t.Store(time.Now())
-			}
-		}
-	}()
+	n := time.Now()
+	f.t.Store(n)
+	atomic.StoreInt64(&f.ut, n.UnixNano())
 	return f
 }
 
@@ -61,6 +51,14 @@ func SetDuration(dur time.Duration) *Fastime {
 	return instance.SetDuration(dur)
 }
 
+func UnixNanoNow() int64 {
+	return instance.UnixNanoNow()
+}
+
+func StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
+	return instance.StartTimerD(ctx, dur)
+}
+
 // Now returns current time
 func (f *Fastime) Now() time.Time {
 	return f.t.Load().(time.Time)
@@ -73,7 +71,42 @@ func (f *Fastime) Stop() {
 
 // SetDuration changes time refresh duration
 func (f *Fastime) SetDuration(dur time.Duration) *Fastime {
-	f.ticker.Stop()
+	if f.running && f.ticker != nil {
+		f.ticker.Stop()
+	}
 	f.ticker = time.NewTicker(dur)
+	return f
+}
+
+func (f *Fastime) UnixNanoNow() int64 {
+	return atomic.LoadInt64(&f.ut)
+}
+
+func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
+	if f.running {
+		f.Stop()
+	}
+
+	var ct context.Context
+	ct, f.cancel = context.WithCancel(ctx)
+	n := time.Now()
+	f.t.Store(n)
+	atomic.StoreInt64(&f.ut, n.UnixNano())
+
+	go func() {
+		f.running = true
+		f.ticker = time.NewTicker(dur)
+		for {
+			select {
+			case <-ct.Done():
+				f.ticker.Stop()
+				return
+			case <-f.ticker.C:
+				n = time.Now()
+				f.t.Store(n)
+				atomic.StoreInt64(&f.ut, n.UnixNano())
+			}
+		}
+	}()
 	return f
 }
