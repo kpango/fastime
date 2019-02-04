@@ -141,14 +141,8 @@ func TestUnixNanoNow(t *testing.T) {
 }
 
 func TestFastime_UnixNanoNow(t *testing.T) {
-	type fields struct {
-		t      atomic.Value
-		cancel context.CancelFunc
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   time.Time
+		name string
 	}{
 		{
 			name: "time equality",
@@ -172,7 +166,6 @@ func TestSetDuration(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *Fastime
 	}{
 		{
 			name: "just pass",
@@ -195,7 +188,6 @@ func TestFastime_SetDuration(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *Fastime
 	}{
 		{
 			name: "just pass",

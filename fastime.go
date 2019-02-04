@@ -51,10 +51,12 @@ func SetDuration(dur time.Duration) *Fastime {
 	return instance.SetDuration(dur)
 }
 
+// UnixNanoNow returns current unix nano time
 func UnixNanoNow() int64 {
 	return instance.UnixNanoNow()
 }
 
+// StartTimerD provides time refresh daemon
 func StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	return instance.StartTimerD(ctx, dur)
 }
@@ -78,10 +80,12 @@ func (f *Fastime) SetDuration(dur time.Duration) *Fastime {
 	return f
 }
 
+// UnixNanoNow returns current unix nano time
 func (f *Fastime) UnixNanoNow() int64 {
 	return atomic.LoadInt64(&f.ut)
 }
 
+// StartTimerD provides time refresh daemon
 func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	if f.running {
 		f.Stop()
@@ -92,7 +96,6 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	n := time.Now()
 	f.t.Store(n)
 	atomic.StoreInt64(&f.ut, n.UnixNano())
-
 	go func() {
 		f.running = true
 		f.ticker = time.NewTicker(dur)
@@ -108,5 +111,6 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 			}
 		}
 	}()
+
 	return f
 }
