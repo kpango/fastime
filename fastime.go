@@ -46,11 +46,6 @@ func Stop() {
 	instance.Stop()
 }
 
-// SetDuration changes time refresh duration
-func SetDuration(dur time.Duration) *Fastime {
-	return instance.SetDuration(dur)
-}
-
 // UnixNanoNow returns current unix nano time
 func UnixNanoNow() int64 {
 	return instance.UnixNanoNow()
@@ -69,15 +64,6 @@ func (f *Fastime) Now() time.Time {
 // Stop stops stopping time refresh daemon
 func (f *Fastime) Stop() {
 	f.cancel()
-}
-
-// SetDuration changes time refresh duration
-func (f *Fastime) SetDuration(dur time.Duration) *Fastime {
-	if f.running && f.ticker != nil {
-		f.ticker.Stop()
-	}
-	f.ticker = time.NewTicker(dur)
-	return f
 }
 
 // UnixNanoNow returns current unix nano time
@@ -103,6 +89,7 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 			select {
 			case <-ct.Done():
 				f.ticker.Stop()
+				f.running = false
 				return
 			case <-f.ticker.C:
 				n = time.Now()

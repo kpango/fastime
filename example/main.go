@@ -10,7 +10,6 @@ import (
 func main() {
 	s1 := fastime.Now()
 	s2 := fastime.Now()
-	fastime.SetDuration(time.Millisecond * 500)
 	s3 := fastime.Now()
 	time.Sleep(time.Second * 2)
 	s4 := fastime.Now()
