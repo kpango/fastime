@@ -19,7 +19,7 @@ deps:
 	dep init
 
 test:
-	go test -v ./...
+	go test --race -v ./...
 
 clean:
 	rm -rf bench
