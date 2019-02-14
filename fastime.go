@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
 // Fastime is fastime's base struct, it's stores atomic time object
@@ -12,6 +13,7 @@ type Fastime struct {
 	running bool
 	t       atomic.Value
 	ut      int64
+	uut     uint32
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
 }
@@ -32,7 +34,9 @@ func New() *Fastime {
 	f := new(Fastime)
 	n := time.Now()
 	f.t.Store(n)
-	atomic.StoreInt64(&f.ut, n.UnixNano())
+	tn := n.UnixNano()
+	atomic.StoreInt64(&f.ut, tn)
+	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&tn)))
 	return f
 }
 
@@ -49,6 +53,11 @@ func Stop() {
 // UnixNanoNow returns current unix nano time
 func UnixNanoNow() int64 {
 	return instance.UnixNanoNow()
+}
+
+// UnixNanoNow returns current unix nano time
+func UnixUNanoNow() uint32 {
+	return instance.UnixUNanoNow()
 }
 
 // StartTimerD provides time refresh daemon
@@ -71,6 +80,11 @@ func (f *Fastime) UnixNanoNow() int64 {
 	return atomic.LoadInt64(&f.ut)
 }
 
+// UnixNanoNow returns current unix nano time
+func (f *Fastime) UnixUNanoNow() uint32 {
+	return atomic.LoadUint32(&f.uut)
+}
+
 // StartTimerD provides time refresh daemon
 func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	if f.running {
@@ -82,6 +96,7 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	n := time.Now()
 	f.t.Store(n)
 	atomic.StoreInt64(&f.ut, n.UnixNano())
+	atomic.StoreUint32(&f.uut, uint32(n.UnixNano()))
 	go func() {
 		f.running = true
 		f.ticker = time.NewTicker(dur)
@@ -95,6 +110,7 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 				n = time.Now()
 				f.t.Store(n)
 				atomic.StoreInt64(&f.ut, n.UnixNano())
+				atomic.StoreUint32(&f.uut, uint32(n.UnixNano()))
 			}
 		}
 	}()
