@@ -158,3 +158,39 @@ func TestFastime_UnixNanoNow(t *testing.T) {
 		})
 	}
 }
+
+func TestUnixUNanoNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "time equality",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if UnixUNanoNow() != uint32(Now().UnixNano()) {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
+
+func TestFastime_UnixUNanoNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "time equality",
+		},
+	}
+
+	f := New().StartTimerD(context.Background(), time.Nanosecond)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if f.UnixUNanoNow() != uint32(f.Now().UnixNano()) {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
