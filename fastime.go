@@ -13,7 +13,9 @@ type Fastime struct {
 	running bool
 	t       atomic.Value
 	ut      int64
+	unt     int64
 	uut     uint32
+	uunt    uint32
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
 }
@@ -34,9 +36,12 @@ func New() *Fastime {
 	f := new(Fastime)
 	n := time.Now()
 	f.t.Store(n)
-	tn := n.UnixNano()
-	atomic.StoreInt64(&f.ut, tn)
-	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&tn)))
+	ut := n.Unix()
+	unt := n.UnixNano()
+	atomic.StoreInt64(&f.ut, ut)
+	atomic.StoreInt64(&f.unt, unt)
+	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
+	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
 	return f
 }
 
@@ -48,6 +53,16 @@ func Now() time.Time {
 // Stop stops stopping time refresh daemon
 func Stop() {
 	instance.Stop()
+}
+
+// UnixNow returns current unix time
+func UnixNow() int64 {
+	return instance.UnixNow()
+}
+
+// UnixNow returns current unix time
+func UnixUNow() uint32 {
+	return instance.UnixUNow()
 }
 
 // UnixNanoNow returns current unix nano time
@@ -75,14 +90,24 @@ func (f *Fastime) Stop() {
 	f.cancel()
 }
 
+// UnixNow returns current unix time
+func (f *Fastime) UnixNow() int64 {
+	return atomic.LoadInt64(&f.ut)
+}
+
+// UnixNow returns current unix time
+func (f *Fastime) UnixUNow() uint32 {
+	return atomic.LoadUint32(&f.uut)
+}
+
 // UnixNanoNow returns current unix nano time
 func (f *Fastime) UnixNanoNow() int64 {
-	return atomic.LoadInt64(&f.ut)
+	return atomic.LoadInt64(&f.unt)
 }
 
 // UnixNanoNow returns current unix nano time
 func (f *Fastime) UnixUNanoNow() uint32 {
-	return atomic.LoadUint32(&f.uut)
+	return atomic.LoadUint32(&f.uunt)
 }
 
 // StartTimerD provides time refresh daemon
@@ -109,8 +134,12 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 			case <-f.ticker.C:
 				n = time.Now()
 				f.t.Store(n)
-				atomic.StoreInt64(&f.ut, n.UnixNano())
-				atomic.StoreUint32(&f.uut, uint32(n.UnixNano()))
+				ut := n.Unix()
+				unt := n.UnixNano()
+				atomic.StoreInt64(&f.ut, ut)
+				atomic.StoreInt64(&f.unt, unt)
+				atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
+				atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
 			}
 		}
 	}()
