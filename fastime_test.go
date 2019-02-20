@@ -123,7 +123,7 @@ func TestFastime_Stop(t *testing.T) {
 	}
 }
 
-func TestUnixNanoNow(t *testing.T) {
+func TestUnixNow(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -133,7 +133,62 @@ func TestUnixNanoNow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if UnixNanoNow() != Now().UnixNano() {
+			if UnixNow() != Now().Unix() {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
+
+func TestFastime_UnixNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "time equality",
+		},
+	}
+
+	f := New().StartTimerD(context.Background(), time.Millisecond)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if f.UnixNow() != f.Now().Unix() {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
+
+func TestUnixUNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "time equality",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if UnixUNow() != uint32(Now().Unix()) {
+				t.Error("time is not correct")
+			}
+		})
+	}
+}
+
+func TestFastime_UnixUNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "time equality",
+		},
+	}
+
+	f := New().StartTimerD(context.Background(), time.Millisecond)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if f.UnixUNow() != uint32(f.Now().Unix()) {
 				t.Error("time is not correct")
 			}
 		})
