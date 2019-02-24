@@ -1,7 +1,6 @@
 package fastime
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"sync/atomic"
@@ -21,7 +20,6 @@ type Fastime struct {
 	format  *atomic.Value
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
-	pool    sync.Pool
 }
 
 var (
@@ -37,28 +35,20 @@ func init() {
 
 // New returns Fastime
 func New() *Fastime {
-	return func() *Fastime {
-		f := &Fastime{
-			t:       new(atomic.Value),
-			running: false,
-			format: func() *atomic.Value {
-				av := new(atomic.Value)
-				av.Store(time.RFC3339)
-				return av
-			}(),
-			ft: func() *atomic.Value {
-				av := new(atomic.Value)
-				av.Store(make([]byte, 0, len(time.RFC3339))[:0])
-				return av
-			}(),
-		}
-		f.pool = sync.Pool{
-			New: func() interface{} {
-				return bytes.NewBuffer(make([]byte, 0, len(f.format.Load().(string))))
-			},
-		}
-		return f
-	}().refresh()
+	return (&Fastime{
+		t:       new(atomic.Value),
+		running: false,
+		format: func() *atomic.Value {
+			av := new(atomic.Value)
+			av.Store(time.RFC3339)
+			return av
+		}(),
+		ft: func() *atomic.Value {
+			av := new(atomic.Value)
+			av.Store(make([]byte, 0, len(time.RFC3339))[:0])
+			return av
+		}(),
+	}).refresh()
 }
 
 func (f *Fastime) refresh() *Fastime {
@@ -70,10 +60,8 @@ func (f *Fastime) refresh() *Fastime {
 	atomic.StoreInt64(&f.unt, unt)
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
-	buf := f.pool.Get().(*bytes.Buffer)
-	f.ft.Store(n.AppendFormat(buf.Bytes()[:0], f.format.Load().(string)))
-	buf.Reset()
-	f.pool.Put(buf)
+	form := f.format.Load().(string)
+	f.ft.Store(n.AppendFormat(make([]byte, 0, len(form)), form))
 	return f
 }
 
