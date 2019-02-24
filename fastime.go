@@ -1,6 +1,7 @@
 package fastime
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"sync/atomic"
@@ -53,7 +54,7 @@ func New() *Fastime {
 		}
 		f.pool = sync.Pool{
 			New: func() interface{} {
-				return make([]byte, 0, len(f.format.Load().(string)))
+				return bytes.NewBuffer(make([]byte, 0, len(f.format.Load().(string))))
 			},
 		}
 		return f
@@ -69,9 +70,9 @@ func (f *Fastime) refresh() *Fastime {
 	atomic.StoreInt64(&f.unt, unt)
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
-	buf := f.pool.Get().([]byte)[:0]
-	f.ft.Store(n.AppendFormat(buf, f.format.Load().(string)))
-	f.pool.Put(buf[:0])
+	buf := f.pool.Get().(*bytes.Buffer)
+	f.ft.Store(n.AppendFormat(buf.Bytes(), f.format.Load().(string)))
+	f.pool.Put(buf)
 	return f
 }
 
