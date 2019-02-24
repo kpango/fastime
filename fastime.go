@@ -110,7 +110,7 @@ func UnixUNanoNow() uint32 {
 	return instance.UnixUNanoNow()
 }
 
-// FormattedNow returns formatted byte tim
+// FormattedNow returns formatted byte time
 func FormattedNow() []byte {
 	return instance.FormattedNow()
 }
