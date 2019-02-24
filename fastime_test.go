@@ -301,9 +301,7 @@ func TestFormattedNow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dst := make([]byte, 0, len(time.RFC3339))
-			FormattedNow(dst)
-			t.Log(string(dst))
+			t.Log(string(FormattedNow()))
 		})
 	}
 }
@@ -320,9 +318,7 @@ func TestFastime_FormattedNow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dst := make([]byte, 0, len(time.RFC3339))
-			tt.f.FormattedNow(dst)
-			t.Log(string(dst))
+			t.Log(string(tt.f.FormattedNow()))
 		})
 	}
 }

@@ -111,8 +111,8 @@ func UnixUNanoNow() uint32 {
 }
 
 // FormattedNow returns formatted byte tim
-func FormattedNow(dst []byte) {
-	instance.FormattedNow(dst)
+func FormattedNow() []byte {
+	return instance.FormattedNow()
 }
 
 // StartTimerD provides time refresh daemon
@@ -151,8 +151,8 @@ func (f *Fastime) UnixUNanoNow() uint32 {
 }
 
 // FormattedNow returns formatted byte time
-func (f *Fastime) FormattedNow(dst []byte) {
-	copy(dst, f.ft.Load().([]byte))
+func (f *Fastime) FormattedNow() []byte {
+	return f.ft.Load().([]byte)
 }
 
 // StartTimerD provides time refresh daemon
