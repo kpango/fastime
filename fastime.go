@@ -69,7 +69,9 @@ func (f *Fastime) refresh() *Fastime {
 	atomic.StoreInt64(&f.unt, unt)
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
-	f.ft.Store(n.AppendFormat(f.ft.Load().([]byte)[:0], f.format.Load().(string)))
+	buf := f.pool.Get().([]byte)[:0]
+	f.ft.Store(n.AppendFormat(buf, f.format.Load().(string)))
+	f.pool.Put(buf[:0])
 	return f
 }
 
