@@ -2,6 +2,7 @@ package fastime
 
 import (
 	"context"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -246,6 +247,82 @@ func TestFastime_UnixUNanoNow(t *testing.T) {
 			if f.UnixUNanoNow() != uint32(f.Now().UnixNano()) {
 				t.Error("time is not correct")
 			}
+		})
+	}
+}
+
+func TestFastime_refresh(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Fastime
+	}{
+		{
+			name: "refresh",
+			f:    New(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.refresh(); time.Since(got.Now()) > time.Second {
+				t.Errorf("time didn't refreshed Fastime.refresh() = %v", got.Now())
+			}
+		})
+	}
+}
+
+func TestFastime_SetFormat(t *testing.T) {
+	tests := []struct {
+		name   string
+		f      *Fastime
+		format string
+	}{
+		{
+			name:   "set RFC3339",
+			f:      New(),
+			format: time.RFC3339,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.SetFormat(tt.format); !reflect.DeepEqual(got.format.Load().(string), time.RFC3339) {
+				t.Errorf("Fastime.SetFormat() = %v, want %v", got.format.Load().(string), time.RFC3339)
+			}
+		})
+	}
+}
+
+func TestFormattedNow(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "fetch",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dst := make([]byte, 0, len(time.RFC3339))
+			FormattedNow(dst)
+			t.Log(string(dst))
+		})
+	}
+}
+
+func TestFastime_FormattedNow(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Fastime
+	}{
+		{
+			name: "fetch",
+			f:    New(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dst := make([]byte, 0, len(time.RFC3339))
+			tt.f.FormattedNow(dst)
+			t.Log(string(dst))
 		})
 	}
 }
