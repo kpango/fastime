@@ -270,6 +270,24 @@ func TestFastime_refresh(t *testing.T) {
 	}
 }
 
+func TestSetFormat(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+	}{
+		{
+			name:   "set RFC3339",
+			format: time.RFC3339,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SetFormat(tt.format); !reflect.DeepEqual(got.format.Load().(string), time.RFC3339) {
+				t.Errorf("SetFormat() = %v, want %v", got.format.Load().(string), time.RFC3339)
+			}
+		})
+	}
+}
 func TestFastime_SetFormat(t *testing.T) {
 	tests := []struct {
 		name   string
