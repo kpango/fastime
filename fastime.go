@@ -66,6 +66,11 @@ func (f *Fastime) refresh() *Fastime {
 }
 
 // SetFormat replaces time format
+func SetFormat(format string) *Fastime {
+	return instance.SetFormat(format)
+}
+
+// SetFormat replaces time format
 func (f *Fastime) SetFormat(format string) *Fastime {
 	f.format.Store(format)
 	f.refresh()
