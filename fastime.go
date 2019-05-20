@@ -12,14 +12,13 @@ import (
 type Fastime struct {
 	running bool
 	t       *atomic.Value
-	ut      int64
 	unt     int64
-	uut     uint32
 	uunt    uint32
 	ft      *atomic.Value
 	format  *atomic.Value
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
+	refInt  time.Duration // ticker refresh interval
 }
 
 var (
@@ -35,7 +34,7 @@ func init() {
 
 // New returns Fastime
 func New() *Fastime {
-	return (&Fastime{
+	f := (&Fastime{
 		t:       new(atomic.Value),
 		running: false,
 		format: func() *atomic.Value {
@@ -48,17 +47,27 @@ func New() *Fastime {
 			av.Store(make([]byte, 0, len(time.RFC3339))[:0])
 			return av
 		}(),
-	}).refresh()
+	})
+	f.initTime()
+	return f
 }
 
-func (f *Fastime) refresh() *Fastime {
-	n := time.Now()
+func (f *Fastime) initTime() {
+	f.update(time.Now())
+}
+
+func (f *Fastime) refreshTime() {
+	/*
+		lastNow := f.Now()
+		f.update(lastNow.Add(f.refInt))
+	*/
+	f.initTime()
+}
+
+func (f *Fastime) update(n time.Time) *Fastime {
 	f.t.Store(n)
-	ut := n.Unix()
 	unt := n.UnixNano()
-	atomic.StoreInt64(&f.ut, ut)
 	atomic.StoreInt64(&f.unt, unt)
-	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
 	form := f.format.Load().(string)
 	f.ft.Store(n.AppendFormat(make([]byte, 0, len(form)), form))
@@ -73,7 +82,7 @@ func SetFormat(format string) *Fastime {
 // SetFormat replaces time format
 func (f *Fastime) SetFormat(format string) *Fastime {
 	f.format.Store(format)
-	f.refresh()
+	// f.refreshTime()
 	return f
 }
 
@@ -129,12 +138,13 @@ func (f *Fastime) Stop() {
 
 // UnixNow returns current unix time
 func (f *Fastime) UnixNow() int64 {
-	return atomic.LoadInt64(&f.ut)
+	return atomic.LoadInt64(&f.unt) / 1e9
 }
 
 // UnixNow returns current unix time
 func (f *Fastime) UnixUNow() uint32 {
-	return atomic.LoadUint32(&f.uut)
+	un := f.UnixNow()
+	return *(*uint32)(unsafe.Pointer(&un))
 }
 
 // UnixNanoNow returns current unix nano time
@@ -157,13 +167,15 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	if f.running {
 		f.Stop()
 	}
-	f.refresh()
+	f.initTime()
 
 	var ct context.Context
 	ct, f.cancel = context.WithCancel(ctx)
 	go func() {
 		f.running = true
+		c := 0
 		f.ticker = time.NewTicker(dur)
+		f.refInt = dur
 		for {
 			select {
 			case <-ct.Done():
@@ -171,7 +183,13 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 				f.running = false
 				return
 			case <-f.ticker.C:
-				f.refresh()
+				if c%8 == 0 {
+					f.initTime()
+					c = 0
+				} else {
+					f.refreshTime()
+					c = c + 1
+				}
 			}
 		}
 	}()
