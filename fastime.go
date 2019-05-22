@@ -199,10 +199,10 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 				f.running = false
 				f.mu.Unlock()
 				return
-			case <-ticker.C:
-				f.update()
 			case <-ctick.C:
 				f.refresh()
+			case <-ticker.C:
+				f.update()
 			}
 		}
 	}()
