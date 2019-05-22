@@ -340,3 +340,62 @@ func TestFastime_FormattedNow(t *testing.T) {
 		})
 	}
 }
+
+func TestFastime_now(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Fastime
+	}{
+		{
+			name: "now",
+			f:    New(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.now(); time.Since(got) > time.Second {
+				t.Errorf("time didn't correct Fastime.now() = %v", got)
+			}
+		})
+	}
+}
+
+func TestFastime_update(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Fastime
+	}{
+		{
+			name: "update",
+			f:    New(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.refresh(); time.Since(got.Now()) > time.Second {
+				t.Errorf("time didn't refreshed Fastime.update() = %v", got.Now())
+			}
+		})
+	}
+}
+
+func TestFastime_store(t *testing.T) {
+	tests := []struct {
+		name string
+		f    *Fastime
+	}{
+		{
+			name: "store",
+			f:    New(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := tt.f.now()
+			if got := tt.f.store(n); tt.f.Now().UnixNano() != n.UnixNano() {
+				t.Errorf("time didn't match Fastime.store() = %v", got.Now())
+			}
+		})
+	}
+
+}
