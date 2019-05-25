@@ -188,23 +188,24 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	go func() {
 		f.mu.Lock()
 		f.running = true
+		f.dur = dur
 		f.mu.Unlock()
-		ticker := time.NewTicker(dur)
+		ticker := time.NewTicker(f.dur)
 		ctick := time.NewTicker(f.correctionDur)
-		fu := f.update
 		for {
 			select {
 			case <-ct.Done():
 				ticker.Stop()
+				ctick.Stop()
 				f.mu.Lock()
 				f.running = false
 				f.mu.Unlock()
 				return
 			case <-ticker.C:
-				fu()
-				fu = f.update
+				f.update()
 			case <-ctick.C:
-				fu = f.refresh
+				<-ticker.C
+				f.refresh()
 			}
 		}
 	}()
