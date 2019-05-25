@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := New().StartTimerD(context.Background(), 10000)
 			time.Sleep(time.Second * 2)
-			if f.Now().Unix() != time.Now().Unix() {
+			if (time.Now().Unix() - f.Now().Unix()) > 1000 {
 				t.Error("time is not correct so daemon is not started")
 			}
 		})
@@ -37,7 +37,7 @@ func TestNow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if Now().Unix() != time.Now().Unix() {
+			if (time.Now().Unix() - Now().Unix()) > 1000 {
 				t.Error("time is not correct")
 			}
 		})
@@ -55,7 +55,7 @@ func TestStop(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			now := Now().Unix()
-			if now != time.Now().Unix() {
+			if (time.Now().Unix() - now) > 1000 {
 				t.Error("time is not correct")
 			}
 			Stop()
