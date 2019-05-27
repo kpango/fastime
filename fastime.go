@@ -146,7 +146,13 @@ func (f *Fastime) Now() time.Time {
 func (f *Fastime) Stop() {
 	f.mu.RLock()
 	if f.running {
+		f.mu.RUnlock()
 		f.cancel()
+		f.mu.Lock()
+		f.running = false
+		f.dur = 0
+		f.mu.Unlock()
+		return
 	}
 	f.mu.RUnlock()
 }
@@ -197,9 +203,6 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 			case <-ct.Done():
 				ticker.Stop()
 				ctick.Stop()
-				f.mu.Lock()
-				f.running = false
-				f.mu.Unlock()
 				return
 			case <-ticker.C:
 				f.update()
