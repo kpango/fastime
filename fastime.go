@@ -11,7 +11,7 @@ import (
 
 // Fastime is fastime's base struct, it's stores atomic time object
 type Fastime struct {
-	running       bool
+	running       *atomic.Value
 	t             *atomic.Value
 	ut            int64
 	unt           int64
@@ -21,8 +21,7 @@ type Fastime struct {
 	format        *atomic.Value
 	cancel        context.CancelFunc
 	correctionDur time.Duration
-	dur           time.Duration
-	mu            sync.RWMutex
+	dur           int64
 }
 
 var (
@@ -32,15 +31,17 @@ var (
 
 func init() {
 	once.Do(func() {
-		instance = New().StartTimerD(context.Background(), time.Millisecond*100)
+		instance = New().StartTimerD(context.Background(), time.Millisecond*5)
 	})
 }
 
 // New returns Fastime
 func New() *Fastime {
+	running := new(atomic.Value)
+	running.Store(false)
 	return (&Fastime{
 		t:       new(atomic.Value),
-		running: false,
+		running: running,
 		format: func() *atomic.Value {
 			av := new(atomic.Value)
 			av.Store(time.RFC3339)
@@ -51,7 +52,7 @@ func New() *Fastime {
 			av.Store(make([]byte, 0, len(time.RFC3339))[:0])
 			return av
 		}(),
-		correctionDur: time.Second * 2,
+		correctionDur: time.Millisecond * 100,
 	}).refresh()
 }
 
@@ -65,7 +66,7 @@ func (f *Fastime) now() time.Time {
 }
 
 func (f *Fastime) update() *Fastime {
-	return f.store(f.Now().Add(f.dur))
+	return f.store(f.Now().Add(time.Duration(atomic.LoadInt64(&f.dur))))
 }
 
 func (f *Fastime) refresh() *Fastime {
@@ -144,17 +145,12 @@ func (f *Fastime) Now() time.Time {
 
 // Stop stops stopping time refresh daemon
 func (f *Fastime) Stop() {
-	f.mu.RLock()
-	if f.running {
-		f.mu.RUnlock()
+	if f.running.Load().(bool) {
 		f.cancel()
-		f.mu.Lock()
-		f.running = false
-		f.dur = 0
-		f.mu.Unlock()
+		f.running.Store(false)
+		atomic.StoreInt64(&f.dur, 0)
 		return
 	}
-	f.mu.RUnlock()
 }
 
 // UnixNow returns current unix time
@@ -184,7 +180,7 @@ func (f *Fastime) FormattedNow() []byte {
 
 // StartTimerD provides time refresh daemon
 func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
-	if f.running {
+	if f.running.Load().(bool) {
 		f.Stop()
 	}
 	f.refresh()
@@ -192,11 +188,9 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	var ct context.Context
 	ct, f.cancel = context.WithCancel(ctx)
 	go func() {
-		f.mu.Lock()
-		f.running = true
-		f.dur = dur
-		f.mu.Unlock()
-		ticker := time.NewTicker(f.dur)
+		f.running.Store(true)
+		atomic.StoreInt64(&f.dur, dur.Nanoseconds())
+		ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
 		ctick := time.NewTicker(f.correctionDur)
 		for {
 			select {
