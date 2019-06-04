@@ -2,7 +2,7 @@
 Blazing Fast Time Library for golang with zero allocs
 
 ## Requirement
-Go 1.8
+Go 1.11
 
 ## Installation
 ```shell
@@ -23,22 +23,32 @@ go get github.com/kpango/fastime
 ## Benchmark
 
 ```
-go test -count=5 -run=NONE -bench . -benchmem
-goos: darwin
+go test -count=10 -run=NONE -bench . -benchmem
+goos: linux
 goarch: amd64
 pkg: github.com/kpango/fastime
-BenchmarkFastime-8   	2000000000	         0.47 ns/op	       0 B/op	       0 allocs/op
-BenchmarkFastime-8   	2000000000	         0.48 ns/op	       0 B/op	       0 allocs/op
-BenchmarkFastime-8   	2000000000	         0.48 ns/op	       0 B/op	       0 allocs/op
-BenchmarkFastime-8   	2000000000	         0.47 ns/op	       0 B/op	       0 allocs/op
-BenchmarkFastime-8   	2000000000	         0.47 ns/op	       0 B/op	       0 allocs/op
-BenchmarkTime-8      	100000000	        16.6 ns/op	       1 B/op	       0 allocs/op
-BenchmarkTime-8      	100000000	        15.4 ns/op	       1 B/op	       0 allocs/op
-BenchmarkTime-8      	100000000	        15.6 ns/op	       1 B/op	       0 allocs/op
-BenchmarkTime-8      	100000000	        15.6 ns/op	       1 B/op	       0 allocs/op
-BenchmarkTime-8      	100000000	        14.9 ns/op	       1 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.45 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFastime-8   	2000000000	         0.46 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1683 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1720 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1688 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1716 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1691 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1693 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1703 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1668 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1685 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTime-8      	 1000000	      1716 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/kpango/fastime	12.936s
+ok  	github.com/kpango/fastime	26.873s
 ```
 ## Contribution
 1. Fork it ( https://github.com/kpango/fastime/fork )
