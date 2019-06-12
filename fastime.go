@@ -147,7 +147,6 @@ func (f *Fastime) Now() time.Time {
 func (f *Fastime) Stop() {
 	if f.running.Load().(bool) {
 		f.cancel()
-		f.running.Store(false)
 		atomic.StoreInt64(&f.dur, 0)
 		return
 	}
@@ -195,6 +194,7 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 		for {
 			select {
 			case <-ct.Done():
+				f.running.Store(false)
 				ticker.Stop()
 				ctick.Stop()
 				return
