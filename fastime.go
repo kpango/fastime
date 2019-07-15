@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 	"unsafe"
 )
@@ -54,15 +53,6 @@ func New() *Fastime {
 		}(),
 		correctionDur: time.Millisecond * 100,
 	}).refresh()
-}
-
-func (f *Fastime) now() time.Time {
-	var tv syscall.Timeval
-	err := syscall.Gettimeofday(&tv)
-	if err != nil {
-		return time.Now()
-	}
-	return time.Unix(0, syscall.TimevalToNsec(tv))
 }
 
 func (f *Fastime) update() *Fastime {
