@@ -108,9 +108,10 @@ func TestFastime_Stop(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := New().StartTimerD(context.Background(), time.Millisecond*5)
+			f := New().StartTimerD(context.Background(), time.Nanosecond*5)
+			time.Sleep(time.Second)
 			now := f.Now().Unix()
-			if now != time.Now().Unix() {
+			if (time.Now().Unix() - now) > 1000 {
 				t.Error("time is not correct")
 			}
 			f.Stop()
