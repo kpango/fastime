@@ -39,9 +39,13 @@ func init() {
 func New() *Fastime {
 	running := new(atomic.Value)
 	running.Store(false)
-	return (&Fastime{
+	f := &Fastime{
 		t:       new(atomic.Value),
 		running: running,
+		ut:      math.MaxInt64,
+		unt:     math.MaxInt64,
+		uut:     math.MaxUint32,
+		uunt:    math.MaxUint32,
 		format: func() *atomic.Value {
 			av := new(atomic.Value)
 			av.Store(time.RFC3339)
@@ -53,7 +57,8 @@ func New() *Fastime {
 			return av
 		}(),
 		correctionDur: time.Millisecond * 100,
-	}).refresh()
+	}
+	return f.refresh()
 }
 
 func (f *Fastime) update() *Fastime {
