@@ -2,6 +2,7 @@ package fastime
 
 import (
 	"context"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -178,6 +179,7 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 	ct, f.cancel = context.WithCancel(ctx)
 	go func() {
 		f.running.Store(true)
+		f.dur = math.MaxInt64
 		atomic.StoreInt64(&f.dur, dur.Nanoseconds())
 		ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
 		ctick := time.NewTicker(f.correctionDur)
