@@ -11,7 +11,7 @@ func (f *Fastime) now() time.Time {
 	var tv syscall.Timeval
 	err := syscall.Gettimeofday(&tv)
 	if err != nil {
-		return time.Now()
+		return time.Now().In(time.Local)
 	}
-	return time.Unix(0, syscall.TimevalToNsec(tv))
+	return time.Unix(0, syscall.TimevalToNsec(tv)).In(time.Local)
 }

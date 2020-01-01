@@ -198,8 +198,15 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 			case <-ticker.C:
 				f.update()
 			case <-ctick.C:
-				<-ticker.C
-				f.refresh()
+				select {
+				case <-ct.Done():
+					f.running.Store(false)
+					ticker.Stop()
+					ctick.Stop()
+					return
+				case <-ticker.C:
+					f.refresh()
+				}
 			}
 		}
 	}()
