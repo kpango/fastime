@@ -2,7 +2,7 @@ alias:
   default: &default
     working_directory: /go/src/github.com/kpango/fastime
     docker:
-      - image: circleci/golang:1.15.8
+      - image: circleci/golang:1.16.3
         environment:
           GOPATH: "/go"
           GO111MODULE: "on"
