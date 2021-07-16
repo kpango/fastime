@@ -11,17 +11,17 @@ import (
 
 // Fastime is fastime's base struct, it's stores atomic time object
 type Fastime struct {
-	running       *atomic.Value
-	t             *atomic.Value
-	ut            int64
-	unt           int64
 	uut           uint32
 	uunt          uint32
+	dur           int64
+	ut            int64
+	unt           int64
+	correctionDur time.Duration
+	running       *atomic.Value
+	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
 	cancel        context.CancelFunc
-	correctionDur time.Duration
-	dur           int64
 }
 
 var (
