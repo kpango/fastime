@@ -13,6 +13,8 @@ clean:
 	rm -rf bench
 	rm -rf pprof
 	rm -rf vendor
+	go mod init
+	go mod tidy
 
 
 bench: clean
