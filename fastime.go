@@ -14,6 +14,7 @@ type Fastime struct {
 	dur           int64
 	ut            int64
 	unt           int64
+	correctionDur time.Duration
 	uut           uint32
 	uunt          uint32
 	running       *atomic.Value
@@ -21,8 +22,6 @@ type Fastime struct {
 	ft            *atomic.Value
 	format        *atomic.Value
 	cancel        context.CancelFunc
-	correctionDur time.Duration
-	
 }
 
 var (
