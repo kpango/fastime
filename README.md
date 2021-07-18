@@ -14,7 +14,7 @@
 fastime is a super fast time function library for Go with zero memory allocation. fastime returns the approximate time.
 
 ## Requirement
-Go 1.1
+Go 1.16
 
 ## Installation
 ```shell
