@@ -1,6 +1,7 @@
 package fastime
 
 import (
+	"bytes"
 	"context"
 	"math"
 	"sync"
@@ -21,6 +22,7 @@ type Fastime struct {
 	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
+	pool          sync.Pool
 	cancel        context.CancelFunc
 }
 
@@ -51,13 +53,22 @@ func New() *Fastime {
 			av.Store(time.RFC3339)
 			return av
 		}(),
-		ft: func() *atomic.Value {
-			av := new(atomic.Value)
-			av.Store(make([]byte, 0, len(time.RFC3339))[:0])
-			return av
-		}(),
 		correctionDur: time.Millisecond * 100,
 	}
+	f.pool = sync.Pool{
+		New: func() interface{} {
+			return bytes.NewBuffer(make([]byte, 0, len(f.format.Load().(string))))
+		},
+	}
+	f.ft = func() *atomic.Value {
+		av := new(atomic.Value)
+		buf := f.pool.Get().(*bytes.Buffer)
+		buf.Reset()
+		av.Store(buf.Bytes())
+		f.pool.Put(buf)
+		return av
+	}()
+
 	return f.refresh()
 }
 
@@ -78,7 +89,12 @@ func (f *Fastime) store(t time.Time) *Fastime {
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
 	form := f.format.Load().(string)
-	f.ft.Store(t.AppendFormat(make([]byte, 0, len(form)), form))
+	buf := f.pool.Get().(*bytes.Buffer)
+	if buf == nil || len(form) > buf.Cap() {
+		buf.Grow(len(form))
+	}
+	f.ft.Store(t.AppendFormat(buf.Bytes()[:0], form))
+	f.pool.Put(buf)
 	return f
 }
 
