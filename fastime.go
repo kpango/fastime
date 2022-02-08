@@ -1,10 +1,8 @@
 package fastime
 
 import (
-	"bytes"
 	"context"
 	"math"
-	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -73,17 +71,9 @@ func newFastime() *fastime {
 		}(),
 		correctionDur: time.Millisecond * 100,
 	}
-	f.pool = sync.Pool{
-		New: func() interface{} {
-			return bytes.NewBuffer(make([]byte, 0, len(f.GetFormat())))
-		},
-	}
 	f.ft = func() *atomic.Value {
 		av := new(atomic.Value)
-		buf := f.pool.Get().(*bytes.Buffer)
-		buf.Reset()
-		av.Store(buf.Bytes())
-		f.pool.Put(buf)
+		av.Store(f.newBuffer(len(f.GetFormat()) + 10))
 		return av
 	}()
 
@@ -98,6 +88,16 @@ func (f *fastime) refresh() *fastime {
 	return f.store(f.now())
 }
 
+func (f *fastime) newBuffer(max int) (b []byte) {
+	if max < bufSize {
+		var buf [bufSize]byte
+		b = buf[:0]
+	} else {
+		b = make([]byte, 0, max)
+	}
+	return b
+}
+
 func (f *fastime) store(t time.Time) *fastime {
 	f.t.Store(t)
 	ut := t.Unix()
@@ -107,15 +107,7 @@ func (f *fastime) store(t time.Time) *fastime {
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
 	form := f.GetFormat()
-	var b []byte
-	max := len(form) + 10
-	if max < bufSize {
-		var buf [bufSize]byte
-		b = buf[:0]
-	} else {
-		b = make([]byte, 0, max)
-	}
-	f.ft.Store(t.AppendFormat(b, form))
+	f.ft.Store(t.AppendFormat(f.newBuffer(len(form)+10), form))
 	return f
 }
 
