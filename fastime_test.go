@@ -255,11 +255,11 @@ func TestFastime_UnixUNanoNow(t *testing.T) {
 func TestFastime_refresh(t *testing.T) {
 	tests := []struct {
 		name string
-		f    *Fastime
+		f    *fastime
 	}{
 		{
 			name: "refresh",
-			f:    New(),
+			f:    newFastime(),
 		},
 	}
 	for _, tt := range tests {
@@ -283,8 +283,8 @@ func TestSetFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := SetFormat(tt.format); !reflect.DeepEqual(got.format.Load().(string), time.RFC3339) {
-				t.Errorf("SetFormat() = %v, want %v", got.format.Load().(string), time.RFC3339)
+			if got := SetFormat(tt.format); !reflect.DeepEqual(got.GetFormat(), time.RFC3339) {
+				t.Errorf("SetFormat() = %v, want %v", got.GetFormat(), time.RFC3339)
 			}
 		})
 	}
@@ -292,7 +292,7 @@ func TestSetFormat(t *testing.T) {
 func TestFastime_SetFormat(t *testing.T) {
 	tests := []struct {
 		name   string
-		f      *Fastime
+		f      Fastime
 		format string
 	}{
 		{
@@ -303,8 +303,8 @@ func TestFastime_SetFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.f.SetFormat(tt.format); !reflect.DeepEqual(got.format.Load().(string), time.RFC3339) {
-				t.Errorf("Fastime.SetFormat() = %v, want %v", got.format.Load().(string), time.RFC3339)
+			if got := tt.f.SetFormat(tt.format); !reflect.DeepEqual(got.GetFormat(), time.RFC3339) {
+				t.Errorf("Fastime.SetFormat() = %v, want %v", got.GetFormat(), time.RFC3339)
 			}
 		})
 	}
@@ -328,7 +328,7 @@ func TestFormattedNow(t *testing.T) {
 func TestFastime_FormattedNow(t *testing.T) {
 	tests := []struct {
 		name string
-		f    *Fastime
+		f    Fastime
 	}{
 		{
 			name: "fetch",
@@ -345,11 +345,11 @@ func TestFastime_FormattedNow(t *testing.T) {
 func TestFastime_now(t *testing.T) {
 	tests := []struct {
 		name string
-		f    *Fastime
+		f    *fastime
 	}{
 		{
 			name: "now",
-			f:    New(),
+			f:    newFastime(),
 		},
 	}
 	for _, tt := range tests {
@@ -364,11 +364,11 @@ func TestFastime_now(t *testing.T) {
 func TestFastime_update(t *testing.T) {
 	tests := []struct {
 		name string
-		f    *Fastime
+		f    *fastime
 	}{
 		{
 			name: "update",
-			f:    New(),
+			f:    newFastime(),
 		},
 	}
 	for _, tt := range tests {
@@ -383,11 +383,11 @@ func TestFastime_update(t *testing.T) {
 func TestFastime_store(t *testing.T) {
 	tests := []struct {
 		name string
-		f    *Fastime
+		f    *fastime
 	}{
 		{
 			name: "store",
-			f:    New(),
+			f:    newFastime(),
 		},
 	}
 	for _, tt := range tests {

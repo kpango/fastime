@@ -10,8 +10,24 @@ import (
 	"unsafe"
 )
 
+type Fastime interface {
+	IsDaemonRunning() bool
+	GetFormat() string
+	SetFormat(format string) Fastime
+	GetLocation() *time.Location
+	SetLocation(location *time.Location) Fastime
+	Now() time.Time
+	Stop()
+	UnixNow() int64
+	UnixUNow() uint32
+	UnixNanoNow() int64
+	UnixUNanoNow() uint32
+	FormattedNow() []byte
+	StartTimerD(ctx context.Context, dur time.Duration) Fastime
+}
+
 // Fastime is fastime's base struct, it's stores atomic time object
-type Fastime struct {
+type fastime struct {
 	uut           uint32
 	uunt          uint32
 	dur           int64
@@ -22,42 +38,43 @@ type Fastime struct {
 	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
-	pool          sync.Pool
+	location      *atomic.Value
 	cancel        context.CancelFunc
-}
-
-var (
-	once     sync.Once
-	instance *Fastime
-)
-
-func init() {
-	once.Do(func() {
-		instance = New().StartTimerD(context.Background(), time.Millisecond*5)
-	})
+	pool          sync.Pool
 }
 
 // New returns Fastime
-func New() *Fastime {
-	running := new(atomic.Value)
-	running.Store(false)
-	f := &Fastime{
-		t:       new(atomic.Value),
-		running: running,
-		ut:      math.MaxInt64,
-		unt:     math.MaxInt64,
-		uut:     math.MaxUint32,
-		uunt:    math.MaxUint32,
+func New() Fastime {
+	return newFastime()
+}
+
+func newFastime() *fastime {
+	f := &fastime{
+		t: new(atomic.Value),
+		running: func() *atomic.Value {
+			av := new(atomic.Value)
+			av.Store(false)
+			return av
+		}(),
+		ut:   math.MaxInt64,
+		unt:  math.MaxInt64,
+		uut:  math.MaxUint32,
+		uunt: math.MaxUint32,
 		format: func() *atomic.Value {
 			av := new(atomic.Value)
 			av.Store(time.RFC3339)
+			return av
+		}(),
+		location: func() *atomic.Value {
+			av := new(atomic.Value)
+			av.Store(time.Local)
 			return av
 		}(),
 		correctionDur: time.Millisecond * 100,
 	}
 	f.pool = sync.Pool{
 		New: func() interface{} {
-			return bytes.NewBuffer(make([]byte, 0, len(f.format.Load().(string))))
+			return bytes.NewBuffer(make([]byte, 0, len(f.GetFormat())))
 		},
 	}
 	f.ft = func() *atomic.Value {
@@ -72,15 +89,15 @@ func New() *Fastime {
 	return f.refresh()
 }
 
-func (f *Fastime) update() *Fastime {
+func (f *fastime) update() *fastime {
 	return f.store(f.Now().Add(time.Duration(atomic.LoadInt64(&f.dur))))
 }
 
-func (f *Fastime) refresh() *Fastime {
+func (f *fastime) refresh() *fastime {
 	return f.store(f.now())
 }
 
-func (f *Fastime) store(t time.Time) *Fastime {
+func (f *fastime) store(t time.Time) *fastime {
 	f.t.Store(t)
 	ut := t.Unix()
 	unt := t.UnixNano()
@@ -88,7 +105,7 @@ func (f *Fastime) store(t time.Time) *Fastime {
 	atomic.StoreInt64(&f.unt, unt)
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
-	form := f.format.Load().(string)
+	form := f.GetFormat()
 	buf := f.pool.Get().(*bytes.Buffer)
 	if buf == nil || len(form) > buf.Cap() {
 		buf.Grow(len(form))
@@ -98,66 +115,40 @@ func (f *Fastime) store(t time.Time) *Fastime {
 	return f
 }
 
-// SetFormat replaces time format
-func SetFormat(format string) *Fastime {
-	return instance.SetFormat(format)
+func (f *fastime) IsDaemonRunning() bool {
+	return f.running.Load().(bool)
+}
+
+func (f *fastime) GetLocation() *time.Location {
+	return f.location.Load().(*time.Location)
+}
+
+func (f *fastime) GetFormat() string {
+	return f.format.Load().(string)
+}
+
+// SetLocation replaces time location
+func (f *fastime) SetLocation(location *time.Location) Fastime {
+	f.location.Store(location)
+	f.refresh()
+	return f
 }
 
 // SetFormat replaces time format
-func (f *Fastime) SetFormat(format string) *Fastime {
+func (f *fastime) SetFormat(format string) Fastime {
 	f.format.Store(format)
 	f.refresh()
 	return f
 }
 
 // Now returns current time
-func Now() time.Time {
-	return instance.Now()
-}
-
-// Stop stops stopping time refresh daemon
-func Stop() {
-	instance.Stop()
-}
-
-// UnixNow returns current unix time
-func UnixNow() int64 {
-	return instance.UnixNow()
-}
-
-// UnixNow returns current unix time
-func UnixUNow() uint32 {
-	return instance.UnixUNow()
-}
-
-// UnixNanoNow returns current unix nano time
-func UnixNanoNow() int64 {
-	return instance.UnixNanoNow()
-}
-
-// UnixNanoNow returns current unix nano time
-func UnixUNanoNow() uint32 {
-	return instance.UnixUNanoNow()
-}
-
-// FormattedNow returns formatted byte time
-func FormattedNow() []byte {
-	return instance.FormattedNow()
-}
-
-// StartTimerD provides time refresh daemon
-func StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
-	return instance.StartTimerD(ctx, dur)
-}
-
-// Now returns current time
-func (f *Fastime) Now() time.Time {
+func (f *fastime) Now() time.Time {
 	return f.t.Load().(time.Time)
 }
 
 // Stop stops stopping time refresh daemon
-func (f *Fastime) Stop() {
-	if f.running.Load().(bool) {
+func (f *fastime) Stop() {
+	if f.IsDaemonRunning() {
 		f.cancel()
 		atomic.StoreInt64(&f.dur, 0)
 		return
@@ -165,33 +156,33 @@ func (f *Fastime) Stop() {
 }
 
 // UnixNow returns current unix time
-func (f *Fastime) UnixNow() int64 {
+func (f *fastime) UnixNow() int64 {
 	return atomic.LoadInt64(&f.ut)
 }
 
 // UnixNow returns current unix time
-func (f *Fastime) UnixUNow() uint32 {
+func (f *fastime) UnixUNow() uint32 {
 	return atomic.LoadUint32(&f.uut)
 }
 
 // UnixNanoNow returns current unix nano time
-func (f *Fastime) UnixNanoNow() int64 {
+func (f *fastime) UnixNanoNow() int64 {
 	return atomic.LoadInt64(&f.unt)
 }
 
 // UnixNanoNow returns current unix nano time
-func (f *Fastime) UnixUNanoNow() uint32 {
+func (f *fastime) UnixUNanoNow() uint32 {
 	return atomic.LoadUint32(&f.uunt)
 }
 
 // FormattedNow returns formatted byte time
-func (f *Fastime) FormattedNow() []byte {
+func (f *fastime) FormattedNow() []byte {
 	return f.ft.Load().([]byte)
 }
 
 // StartTimerD provides time refresh daemon
-func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
-	if f.running.Load().(bool) {
+func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
+	if f.IsDaemonRunning() {
 		f.Stop()
 	}
 	f.refresh()
@@ -226,6 +217,5 @@ func (f *Fastime) StartTimerD(ctx context.Context, dur time.Duration) *Fastime {
 			}
 		}
 	}()
-
 	return f
 }

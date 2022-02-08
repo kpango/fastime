@@ -1,9 +1,10 @@
+//go:build windows
 // +build windows
 
 package fastime
 
 import "time"
 
-func (f *Fastime) now() time.Time {
-	return time.Now().In(time.Local)
+func (f *fastime) now() time.Time {
+	return time.Now().In(f.GetLocation())
 }
