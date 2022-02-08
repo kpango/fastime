@@ -110,7 +110,8 @@ func (f *fastime) store(t time.Time) *fastime {
 	if buf == nil || len(form) > buf.Cap() {
 		buf.Grow(len(form))
 	}
-	f.ft.Store(t.AppendFormat(buf.Bytes()[:0], form))
+	f.ft.Store(t.AppendFormat(buf.Bytes(), form))
+	buf.Reset()
 	f.pool.Put(buf)
 	return f
 }
