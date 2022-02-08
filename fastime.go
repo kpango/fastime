@@ -40,8 +40,9 @@ type fastime struct {
 	format        *atomic.Value
 	location      *atomic.Value
 	cancel        context.CancelFunc
-	pool          sync.Pool
 }
+
+const bufSize = 64
 
 // New returns Fastime
 func New() Fastime {
@@ -106,13 +107,15 @@ func (f *fastime) store(t time.Time) *fastime {
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
 	form := f.GetFormat()
-	buf := f.pool.Get().(*bytes.Buffer)
-	if buf == nil || len(form) > buf.Cap() {
-		buf.Grow(len(form))
+	var b []byte
+	max := len(form) + 10
+	if max < bufSize {
+		var buf [bufSize]byte
+		b = buf[:0]
+	} else {
+		b = make([]byte, 0, max)
 	}
-	f.ft.Store(t.AppendFormat(buf.Bytes(), form))
-	buf.Reset()
-	f.pool.Put(buf)
+	f.ft.Store(t.AppendFormat(b, form))
 	return f
 }
 
