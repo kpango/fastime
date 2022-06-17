@@ -186,6 +186,8 @@ func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
 	var ct context.Context
 	ct, f.cancel = context.WithCancel(ctx)
 	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
 		f.running.Store(true)
 		f.dur = math.MaxInt64
 		atomic.StoreInt64(&f.dur, dur.Nanoseconds())
