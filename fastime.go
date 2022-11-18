@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sync/atomic"
+	"syscall"
 	"time"
 	"unsafe"
 )
@@ -66,6 +67,14 @@ func newFastime() *fastime {
 		}(),
 		location: func() *atomic.Value {
 			av := new(atomic.Value)
+			tz, ok := syscall.Getenv("TZ")
+			if ok && tz != "" {
+				loc, err := time.LoadLocation(tz)
+				if err == nil {
+					av.Store(loc)
+					return av
+				}
+			}
 			av.Store(new(time.Location))
 			return av
 		}(),
