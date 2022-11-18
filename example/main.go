@@ -25,6 +25,11 @@ func main() {
 		fastime.UnixNanoNow()+int64(time.Second),
 		string(fastime.FormattedNow()))
 
+	go func(){
+		time.Sleep(time.Second * 2)
+		fastime.SetLocation(time.FixedZone("Asia/Tokyo", 9*60*60))
+	}()
+
 	for i := 0; i < 30; i++ {
 		time.Sleep(time.Millisecond * 400)
 		fmt.Println(fastime.Now())

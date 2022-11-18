@@ -66,7 +66,7 @@ func newFastime() *fastime {
 		}(),
 		location: func() *atomic.Value {
 			av := new(atomic.Value)
-			av.Store(time.Local)
+			av.Store(new(time.Location))
 			return av
 		}(),
 		correctionDur: time.Millisecond * 100,
@@ -116,7 +116,11 @@ func (f *fastime) IsDaemonRunning() bool {
 }
 
 func (f *fastime) GetLocation() *time.Location {
-	return f.location.Load().(*time.Location)
+	l := f.location.Load()
+	if l == nil{
+		return nil
+	}
+	return l.(*time.Location)
 }
 
 func (f *fastime) GetFormat() string {
@@ -125,6 +129,9 @@ func (f *fastime) GetFormat() string {
 
 // SetLocation replaces time location
 func (f *fastime) SetLocation(location *time.Location) Fastime {
+	if location == nil{
+		return f
+	}
 	f.location.Store(location)
 	f.refresh()
 	return f

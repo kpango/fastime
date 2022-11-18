@@ -8,12 +8,20 @@ import (
 	"time"
 )
 
-func (f *fastime) now() time.Time {
+func (f *fastime) now() (now time.Time) {
 	var tv syscall.Timeval
 	err := syscall.Gettimeofday(&tv)
 	loc := f.GetLocation()
 	if err != nil {
-		return time.Now().In(loc)
+		now = time.Now()
+		if loc != nil{
+		    return now.In(loc)
+		}
+		return now
 	}
-	return time.Unix(0, syscall.TimevalToNsec(tv)).In(loc)
+	now = time.Unix(0, syscall.TimevalToNsec(tv))
+	if loc != nil{
+	    return now.In(loc)
+	}
+	return now
 }
