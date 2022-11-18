@@ -14,14 +14,14 @@ func (f *fastime) now() (now time.Time) {
 	loc := f.GetLocation()
 	if err != nil {
 		now = time.Now()
-		if loc != nil{
-		    return now.In(loc)
+		if loc != nil {
+			return now.In(loc)
 		}
 		return now
 	}
 	now = time.Unix(0, syscall.TimevalToNsec(tv))
-	if loc != nil{
-	    return now.In(loc)
+	if loc != nil {
+		return now.In(loc)
 	}
 	return now
 }

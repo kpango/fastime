@@ -64,7 +64,6 @@ func TestStop(t *testing.T) {
 			if now == time.Now().Unix() {
 				t.Error("refresh daemon stopped but time is same")
 			}
-
 		})
 	}
 }
@@ -120,7 +119,6 @@ func TestFastime_Stop(t *testing.T) {
 			if now == time.Now().Unix() {
 				t.Error("refresh daemon stopped but time is same")
 			}
-
 		})
 	}
 }
@@ -289,6 +287,7 @@ func TestSetFormat(t *testing.T) {
 		})
 	}
 }
+
 func TestFastime_SetFormat(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -398,5 +397,4 @@ func TestFastime_store(t *testing.T) {
 			}
 		})
 	}
-
 }

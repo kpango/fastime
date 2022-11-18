@@ -117,7 +117,7 @@ func (f *fastime) IsDaemonRunning() bool {
 
 func (f *fastime) GetLocation() *time.Location {
 	l := f.location.Load()
-	if l == nil{
+	if l == nil {
 		return nil
 	}
 	return l.(*time.Location)
@@ -129,7 +129,7 @@ func (f *fastime) GetFormat() string {
 
 // SetLocation replaces time location
 func (f *fastime) SetLocation(location *time.Location) Fastime {
-	if location == nil{
+	if location == nil {
 		return f
 	}
 	f.location.Store(location)

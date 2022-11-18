@@ -47,6 +47,12 @@ mem:
 lint:
 	gometalinter --enable-all . | rg -v comment
 
+format:
+	find ./ -type d -name .git -prune -o -type f -regex '.*[^\.pb]\.go' -print | xargs golines -w -m 200
+	find ./ -type d -name .git -prune -o -type f -regex '.*[^\.pb]\.go' -print | xargs gofumpt -w
+	find ./ -type d -name .git -prune -o -type f -regex '.*\.go' -print | xargs strictgoimports -w
+	find ./ -type d -name .git -prune -o -type f -regex '.*\.go' -print | xargs goimports -w
+
 test: clean
 	GO111MODULE=on go test --race -v $(go list ./... | rg -v vendor)
 
