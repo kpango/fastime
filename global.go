@@ -45,7 +45,7 @@ func Now() time.Time {
 }
 
 // Since returns the time elapsed since t.
-// It is shorthand for time.Now().Sub(t).
+// It is shorthand for fastime.Now().Sub(t).
 func Since(t time.Time) time.Duration {
 	return instance.Now().Sub(t)
 }
