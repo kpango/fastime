@@ -44,6 +44,10 @@ func Now() time.Time {
 	return instance.Now()
 }
 
+func Since(t time.Time) time.Duration {
+	return instance.Now().Sub(t)
+}
+
 // Stop stops stopping time refresh daemon
 func Stop() {
 	instance.Stop()

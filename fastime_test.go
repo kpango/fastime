@@ -2,6 +2,7 @@ package fastime
 
 import (
 	"context"
+	"math"
 	"reflect"
 	"sync/atomic"
 	"testing"
@@ -394,6 +395,31 @@ func TestFastime_store(t *testing.T) {
 			n := tt.f.now()
 			if got := tt.f.store(n); tt.f.Now().UnixNano() != n.UnixNano() {
 				t.Errorf("time didn't match Fastime.store() = %v", got.Now())
+			}
+		})
+	}
+}
+
+func TestFastime_Since(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "since",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := Now()
+			timeNow := time.Now()
+			time.Sleep(100 * time.Millisecond)
+			since1 := Since(now)
+			since2 := time.Since(timeNow)
+			if since1 < 50*time.Millisecond {
+				t.Error("since is not correct")
+			}
+			if math.Abs(float64(since1-since2)) > float64(50*time.Millisecond) {
+				t.Error("since error is too large")
 			}
 		})
 	}
