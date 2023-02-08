@@ -47,7 +47,7 @@ func Now() time.Time {
 // Since returns the time elapsed since t.
 // It is shorthand for fastime.Now().Sub(t).
 func Since(t time.Time) time.Duration {
-	return instance.Now().Sub(t)
+	return instance.Since(t)
 }
 
 // Stop stops stopping time refresh daemon

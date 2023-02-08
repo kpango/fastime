@@ -22,6 +22,7 @@ type Fastime interface {
 	UnixNanoNow() int64
 	UnixUNanoNow() uint32
 	FormattedNow() []byte
+	Since(t time.Time) time.Duration
 	StartTimerD(ctx context.Context, dur time.Duration) Fastime
 }
 
@@ -165,6 +166,10 @@ func (f *fastime) Stop() {
 		atomic.StoreInt64(&f.dur, 0)
 		return
 	}
+}
+
+func (f *fastime) Since(t time.Time) time.Duration {
+	return f.Now().Sub(t)
 }
 
 // UnixNow returns current unix time

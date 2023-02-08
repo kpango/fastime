@@ -23,11 +23,11 @@ go get github.com/kpango/fastime
 
 ## Example
 ```go
-    now := fastime.Now()
+    now := fastime.Now().StartTimerD(context.Background(), time.Millisecond*5)
     defer fastime.Stop()
 
     // Create Instance
-    ft := fastime.New()
+    ft := fastime.New().StartTimerD(context.Background(), time.Millisecond*5)
     defer ft.Stop()
     ft.Now()
 ```

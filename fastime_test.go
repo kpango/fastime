@@ -410,16 +410,17 @@ func TestFastime_Since(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			now := Now()
+			f := New().StartTimerD(context.Background(), time.Millisecond*5)
+			now := f.Now()
 			timeNow := time.Now()
-			time.Sleep(100 * time.Millisecond)
-			since1 := Since(now)
+			time.Sleep(time.Second)
+			since1 := f.Since(now)
 			since2 := time.Since(timeNow)
 			if since1 < 50*time.Millisecond {
-				t.Error("since is not correct")
+				t.Errorf("since is not correct.\tfastime.Now: %v,\ttime.Now: %v\tsince1: %d, \tsince2: %d", now.UnixNano(), timeNow.UnixNano(), since1, since2)
 			}
 			if math.Abs(float64(since1-since2)) > float64(50*time.Millisecond) {
-				t.Error("since error is too large")
+				t.Errorf("since error too large.\tfastime.Now: %v,\ttime.Now: %v\tsince1: %d, \tsince2: %d", now.UnixNano(), timeNow.UnixNano(), since1, since2)
 			}
 		})
 	}
