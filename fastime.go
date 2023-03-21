@@ -35,6 +35,7 @@ type fastime struct {
 	ut            int64
 	unt           int64
 	correctionDur time.Duration
+	mu            sync.Mutex
 	wg            sync.WaitGroup
 	running       atomic.Bool
 	t             *atomic.Value
@@ -158,6 +159,12 @@ func (f *fastime) Now() time.Time {
 
 // Stop stops stopping time refresh daemon
 func (f *fastime) Stop() {
+	f.mu.Lock()
+	f.stop()
+	f.mu.Unlock()
+}
+
+func (f *fastime) stop() {
 	if f.IsDaemonRunning() {
 		atomic.StoreInt64(&f.dur, 0)
 		f.wg.Wait()
@@ -200,18 +207,21 @@ func (f *fastime) FormattedNow() []byte {
 
 // StartTimerD provides time refresh daemon
 func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
-	if f.IsDaemonRunning() {
-		f.Stop()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// if the daemon was already running, restart
+	if !f.IsDaemonRunning() {
+		f.stop()
 	}
+	f.running.Store(true)
+	f.dur = math.MaxInt64
+	atomic.StoreInt64(&f.dur, dur.Nanoseconds())
+	ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
+	lastCorrection := f.now()
 	f.wg.Add(1)
 	f.refresh()
 
 	go func() {
-		f.running.Store(true)
-		f.dur = math.MaxInt64
-		atomic.StoreInt64(&f.dur, dur.Nanoseconds())
-		ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
-		lastCorrection := f.now()
 		// daemon cleanup
 		defer func() {
 			f.running.Store(false)

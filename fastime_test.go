@@ -69,6 +69,36 @@ func TestStop(t *testing.T) {
 	}
 }
 
+func TestStartStop(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "check start and stop",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			dur := 10 * time.Millisecond
+			f := New().StartTimerD(ctx, dur)
+			if !f.IsDaemonRunning() {
+				t.Error("daemon should be running")
+			}
+			for i := 0; i < 5; i++ {
+				f.StartTimerD(ctx, dur)
+				if !f.IsDaemonRunning() {
+					t.Error("daemon should be running")
+				}
+				f.Stop()
+				if f.IsDaemonRunning() {
+					t.Error("daemon should not be running")
+				}
+			}
+		})
+	}
+}
+
 func TestFastime_Now(t *testing.T) {
 	type fields struct {
 		t      atomic.Value
