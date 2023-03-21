@@ -255,8 +255,10 @@ func TestUnixUNanoNow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if UnixUNanoNow() != uint32(Now().UnixNano()) {
-				t.Error("time is not correct")
+			exp := UnixUNanoNow()
+			act := uint32(Now().UnixNano())
+			if exp != act {
+				t.Errorf("time is not correct, exp: %v, actual: %v", exp, act)
 			}
 		})
 	}
@@ -274,8 +276,10 @@ func TestFastime_UnixUNanoNow(t *testing.T) {
 	f := New().StartTimerD(context.Background(), time.Nanosecond)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if f.UnixUNanoNow() != uint32(f.Now().UnixNano()) {
-				t.Error("time is not correct")
+			exp := f.UnixUNanoNow()
+			act := uint32(f.Now().UnixNano())
+			if exp != act {
+				t.Errorf("time is not correct, exp: %v, actual: %v", exp, act)
 			}
 		})
 	}

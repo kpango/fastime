@@ -167,8 +167,8 @@ func (f *fastime) Stop() {
 func (f *fastime) stop() {
 	if f.IsDaemonRunning() {
 		atomic.StoreInt64(&f.dur, 0)
-		f.wg.Wait()
 	}
+	f.wg.Wait()
 }
 
 func (f *fastime) Since(t time.Time) time.Duration {
@@ -234,6 +234,11 @@ func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
 			if t.Sub(lastCorrection) < f.correctionDur {
 				f.update()
 			} else { // correct the system time at a fixed interval
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
 				f.refresh()
 				lastCorrection = t
 			}
