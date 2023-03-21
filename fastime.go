@@ -38,6 +38,7 @@ type fastime struct {
 	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
+	formatValid   atomic.Bool
 	location      *atomic.Value
 	cancel        context.CancelFunc
 }
@@ -110,14 +111,13 @@ func (f *fastime) newBuffer(max int) (b []byte) {
 
 func (f *fastime) store(t time.Time) *fastime {
 	f.t.Store(t)
+	f.formatValid.Store(false)
 	ut := t.Unix()
 	unt := t.UnixNano()
 	atomic.StoreInt64(&f.ut, ut)
 	atomic.StoreInt64(&f.unt, unt)
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
-	form := f.GetFormat()
-	f.ft.Store(t.AppendFormat(f.newBuffer(len(form)+10), form))
 	return f
 }
 
@@ -150,6 +150,7 @@ func (f *fastime) SetLocation(location *time.Location) Fastime {
 // SetFormat replaces time format
 func (f *fastime) SetFormat(format string) Fastime {
 	f.format.Store(format)
+	f.formatValid.Store(false)
 	f.refresh()
 	return f
 }
@@ -194,6 +195,11 @@ func (f *fastime) UnixUNanoNow() uint32 {
 
 // FormattedNow returns formatted byte time
 func (f *fastime) FormattedNow() []byte {
+	// only update formatted value on swap
+	if f.formatValid.CompareAndSwap(false, true) {
+		form := f.GetFormat()
+		f.ft.Store(f.Now().AppendFormat(f.newBuffer(len(form)+10), form))
+	}
 	return f.ft.Load().([]byte)
 }
 
