@@ -34,7 +34,7 @@ type fastime struct {
 	ut            int64
 	unt           int64
 	correctionDur time.Duration
-	running       *atomic.Value
+	running       atomic.Bool
 	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
@@ -52,12 +52,7 @@ func New() Fastime {
 
 func newFastime() *fastime {
 	f := &fastime{
-		t: new(atomic.Value),
-		running: func() *atomic.Value {
-			av := new(atomic.Value)
-			av.Store(false)
-			return av
-		}(),
+		t:    new(atomic.Value),
 		ut:   math.MaxInt64,
 		unt:  math.MaxInt64,
 		uut:  math.MaxUint32,
@@ -122,7 +117,7 @@ func (f *fastime) store(t time.Time) *fastime {
 }
 
 func (f *fastime) IsDaemonRunning() bool {
-	return f.running.Load().(bool)
+	return f.running.Load()
 }
 
 func (f *fastime) GetLocation() *time.Location {
