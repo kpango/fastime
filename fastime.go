@@ -3,6 +3,7 @@ package fastime
 import (
 	"context"
 	"math"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -34,13 +35,13 @@ type fastime struct {
 	ut            int64
 	unt           int64
 	correctionDur time.Duration
+	wg            sync.WaitGroup
 	running       atomic.Bool
 	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
 	formatValid   atomic.Bool
 	location      *atomic.Value
-	cancel        context.CancelFunc
 }
 
 const bufSize = 64
@@ -158,9 +159,8 @@ func (f *fastime) Now() time.Time {
 // Stop stops stopping time refresh daemon
 func (f *fastime) Stop() {
 	if f.IsDaemonRunning() {
-		f.cancel()
 		atomic.StoreInt64(&f.dur, 0)
-		return
+		f.wg.Wait()
 	}
 }
 
@@ -203,35 +203,29 @@ func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
 	if f.IsDaemonRunning() {
 		f.Stop()
 	}
+	f.wg.Add(1)
 	f.refresh()
 
-	var ct context.Context
-	ct, f.cancel = context.WithCancel(ctx)
 	go func() {
 		f.running.Store(true)
 		f.dur = math.MaxInt64
 		atomic.StoreInt64(&f.dur, dur.Nanoseconds())
 		ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
-		ctick := time.NewTicker(f.correctionDur)
-		for {
-			select {
-			case <-ct.Done():
-				f.running.Store(false)
-				ticker.Stop()
-				ctick.Stop()
-				return
-			case <-ticker.C:
+		lastCorrection := f.now()
+		// daemon cleanup
+		defer func() {
+			f.running.Store(false)
+			ticker.Stop()
+			f.wg.Done()
+		}()
+		for atomic.LoadInt64(&f.dur) > 0 {
+			t := <-ticker.C
+			// rely on ticker for approximation
+			if t.Sub(lastCorrection) < f.correctionDur {
 				f.update()
-			case <-ctick.C:
-				select {
-				case <-ct.Done():
-					f.running.Store(false)
-					ticker.Stop()
-					ctick.Stop()
-					return
-				case <-ticker.C:
-					f.refresh()
-				}
+			} else { // correct the system time at a fixed interval
+				f.refresh()
+				lastCorrection = t
 			}
 		}
 	}()
