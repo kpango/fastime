@@ -17,36 +17,36 @@ func init() {
 	})
 }
 
-func IsDaemonRunning() bool {
+func IsDaemonRunning() (running bool) {
 	return instance.IsDaemonRunning()
 }
 
-func GetLocation() *time.Location {
+func GetLocation() (loc *time.Location) {
 	return instance.GetLocation()
 }
 
-func GetFormat() string {
+func GetFormat() (form string) {
 	return instance.GetFormat()
 }
 
 // SetLocation replaces time location
-func SetLocation(location *time.Location) Fastime {
+func SetLocation(location *time.Location) (ft Fastime) {
 	return instance.SetLocation(location)
 }
 
 // SetFormat replaces time format
-func SetFormat(format string) Fastime {
+func SetFormat(format string) (ft Fastime) {
 	return instance.SetFormat(format)
 }
 
 // Now returns current time
-func Now() time.Time {
+func Now() (now time.Time) {
 	return instance.Now()
 }
 
 // Since returns the time elapsed since t.
 // It is shorthand for fastime.Now().Sub(t).
-func Since(t time.Time) time.Duration {
+func Since(t time.Time) (dur time.Duration) {
 	return instance.Since(t)
 }
 
@@ -56,31 +56,31 @@ func Stop() {
 }
 
 // UnixNow returns current unix time
-func UnixNow() int64 {
+func UnixNow() (now int64) {
 	return instance.UnixNow()
 }
 
 // UnixUNow returns current unix time
-func UnixUNow() uint32 {
+func UnixUNow() (now uint32) {
 	return instance.UnixUNow()
 }
 
 // UnixNanoNow returns current unix nano time
-func UnixNanoNow() int64 {
+func UnixNanoNow() (now int64) {
 	return instance.UnixNanoNow()
 }
 
 // UnixUNanoNow returns current unix nano time
-func UnixUNanoNow() uint32 {
+func UnixUNanoNow() (now uint32) {
 	return instance.UnixUNanoNow()
 }
 
 // FormattedNow returns formatted byte time
-func FormattedNow() []byte {
+func FormattedNow() (now []byte) {
 	return instance.FormattedNow()
 }
 
 // StartTimerD provides time refresh daemon
-func StartTimerD(ctx context.Context, dur time.Duration) Fastime {
+func StartTimerD(ctx context.Context, dur time.Duration) (ft Fastime) {
 	return instance.StartTimerD(ctx, dur)
 }
