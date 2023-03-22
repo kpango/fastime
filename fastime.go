@@ -210,7 +210,7 @@ func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	// if the daemon was already running, restart
-	if !f.IsDaemonRunning() {
+	if f.IsDaemonRunning() {
 		f.stop()
 	}
 	f.running.Store(true)
