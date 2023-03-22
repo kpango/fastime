@@ -3,6 +3,7 @@ package fastime
 import (
 	"context"
 	"math"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -34,12 +35,14 @@ type fastime struct {
 	ut            int64
 	unt           int64
 	correctionDur time.Duration
-	running       *atomic.Value
+	mu            sync.Mutex
+	wg            sync.WaitGroup
+	running       atomic.Bool
 	t             *atomic.Value
 	ft            *atomic.Value
 	format        *atomic.Value
+	formatValid   atomic.Bool
 	location      *atomic.Value
-	cancel        context.CancelFunc
 }
 
 const bufSize = 64
@@ -51,12 +54,7 @@ func New() Fastime {
 
 func newFastime() *fastime {
 	f := &fastime{
-		t: new(atomic.Value),
-		running: func() *atomic.Value {
-			av := new(atomic.Value)
-			av.Store(false)
-			return av
-		}(),
+		t:    new(atomic.Value),
 		ut:   math.MaxInt64,
 		unt:  math.MaxInt64,
 		uut:  math.MaxUint32,
@@ -110,19 +108,18 @@ func (f *fastime) newBuffer(max int) (b []byte) {
 
 func (f *fastime) store(t time.Time) *fastime {
 	f.t.Store(t)
+	f.formatValid.Store(false)
 	ut := t.Unix()
 	unt := t.UnixNano()
 	atomic.StoreInt64(&f.ut, ut)
 	atomic.StoreInt64(&f.unt, unt)
 	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
 	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
-	form := f.GetFormat()
-	f.ft.Store(t.AppendFormat(f.newBuffer(len(form)+10), form))
 	return f
 }
 
 func (f *fastime) IsDaemonRunning() bool {
-	return f.running.Load().(bool)
+	return f.running.Load()
 }
 
 func (f *fastime) GetLocation() *time.Location {
@@ -150,6 +147,7 @@ func (f *fastime) SetLocation(location *time.Location) Fastime {
 // SetFormat replaces time format
 func (f *fastime) SetFormat(format string) Fastime {
 	f.format.Store(format)
+	f.formatValid.Store(false)
 	f.refresh()
 	return f
 }
@@ -161,11 +159,16 @@ func (f *fastime) Now() time.Time {
 
 // Stop stops stopping time refresh daemon
 func (f *fastime) Stop() {
+	f.mu.Lock()
+	f.stop()
+	f.mu.Unlock()
+}
+
+func (f *fastime) stop() {
 	if f.IsDaemonRunning() {
-		f.cancel()
 		atomic.StoreInt64(&f.dur, 0)
-		return
 	}
+	f.wg.Wait()
 }
 
 func (f *fastime) Since(t time.Time) time.Duration {
@@ -194,43 +197,50 @@ func (f *fastime) UnixUNanoNow() uint32 {
 
 // FormattedNow returns formatted byte time
 func (f *fastime) FormattedNow() []byte {
+	// only update formatted value on swap
+	if f.formatValid.CompareAndSwap(false, true) {
+		form := f.GetFormat()
+		f.ft.Store(f.Now().AppendFormat(f.newBuffer(len(form)+10), form))
+	}
 	return f.ft.Load().([]byte)
 }
 
 // StartTimerD provides time refresh daemon
 func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) Fastime {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// if the daemon was already running, restart
 	if f.IsDaemonRunning() {
-		f.Stop()
+		f.stop()
 	}
+	f.running.Store(true)
+	f.dur = math.MaxInt64
+	atomic.StoreInt64(&f.dur, dur.Nanoseconds())
+	ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
+	lastCorrection := f.now()
+	f.wg.Add(1)
 	f.refresh()
 
-	var ct context.Context
-	ct, f.cancel = context.WithCancel(ctx)
 	go func() {
-		f.running.Store(true)
-		f.dur = math.MaxInt64
-		atomic.StoreInt64(&f.dur, dur.Nanoseconds())
-		ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
-		ctick := time.NewTicker(f.correctionDur)
-		for {
-			select {
-			case <-ct.Done():
-				f.running.Store(false)
-				ticker.Stop()
-				ctick.Stop()
-				return
-			case <-ticker.C:
+		// daemon cleanup
+		defer func() {
+			f.running.Store(false)
+			ticker.Stop()
+			f.wg.Done()
+		}()
+		for atomic.LoadInt64(&f.dur) > 0 {
+			t := <-ticker.C
+			// rely on ticker for approximation
+			if t.Sub(lastCorrection) < f.correctionDur {
 				f.update()
-			case <-ctick.C:
+			} else { // correct the system time at a fixed interval
 				select {
-				case <-ct.Done():
-					f.running.Store(false)
-					ticker.Stop()
-					ctick.Stop()
+				case <-ctx.Done():
 					return
-				case <-ticker.C:
-					f.refresh()
+				default:
 				}
+				f.refresh()
+				lastCorrection = t
 			}
 		}
 	}()

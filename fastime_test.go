@@ -69,6 +69,36 @@ func TestStop(t *testing.T) {
 	}
 }
 
+func TestStartStop(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "check start and stop",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			dur := 10 * time.Millisecond
+			f := New().StartTimerD(ctx, dur)
+			if !f.IsDaemonRunning() {
+				t.Error("daemon should be running")
+			}
+			for i := 0; i < 5; i++ {
+				f.StartTimerD(ctx, dur)
+				if !f.IsDaemonRunning() {
+					t.Error("daemon should be running")
+				}
+				f.Stop()
+				if f.IsDaemonRunning() {
+					t.Error("daemon should not be running")
+				}
+			}
+		})
+	}
+}
+
 func TestFastime_Now(t *testing.T) {
 	type fields struct {
 		t      atomic.Value
@@ -225,8 +255,10 @@ func TestUnixUNanoNow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if UnixUNanoNow() != uint32(Now().UnixNano()) {
-				t.Error("time is not correct")
+			exp := UnixUNanoNow()
+			act := uint32(Now().UnixNano())
+			if exp != act {
+				t.Errorf("time is not correct, exp: %v, actual: %v", exp, act)
 			}
 		})
 	}
@@ -244,8 +276,10 @@ func TestFastime_UnixUNanoNow(t *testing.T) {
 	f := New().StartTimerD(context.Background(), time.Nanosecond)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if f.UnixUNanoNow() != uint32(f.Now().UnixNano()) {
-				t.Error("time is not correct")
+			exp := f.UnixUNanoNow()
+			act := uint32(f.Now().UnixNano())
+			if exp != act {
+				t.Errorf("time is not correct, exp: %v, actual: %v", exp, act)
 			}
 		})
 	}
