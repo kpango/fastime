@@ -38,11 +38,11 @@ type fastime struct {
 	mu            sync.Mutex
 	wg            sync.WaitGroup
 	running       atomic.Bool
-	t             *atomic.Value
-	ft            *atomic.Value
-	format        *atomic.Value
+	t             atomic.Pointer[time.Time]
+	ft            atomic.Pointer[[]byte]
+	format        atomic.Pointer[string]
 	formatValid   atomic.Bool
-	location      *atomic.Value
+	location      atomic.Pointer[time.Location]
 }
 
 const bufSize = 64
@@ -54,36 +54,32 @@ func New() Fastime {
 
 func newFastime() *fastime {
 	f := &fastime{
-		t:    new(atomic.Value),
 		ut:   math.MaxInt64,
 		unt:  math.MaxInt64,
 		uut:  math.MaxUint32,
 		uunt: math.MaxUint32,
-		format: func() *atomic.Value {
-			av := new(atomic.Value)
-			av.Store(time.RFC3339)
-			return av
-		}(),
-		location: func() *atomic.Value {
-			av := new(atomic.Value)
-			tz, ok := syscall.Getenv("TZ")
-			if ok && tz != "" {
-				loc, err := time.LoadLocation(tz)
-				if err == nil {
-					av.Store(loc)
-					return av
-				}
-			}
-			av.Store(new(time.Location))
-			return av
-		}(),
 		correctionDur: time.Millisecond * 100,
 	}
-	f.ft = func() *atomic.Value {
-		av := new(atomic.Value)
-		av.Store(f.newBuffer(len(f.GetFormat()) + 10))
-		return av
-	}()
+
+	form := time.RFC3339
+	f.format.Store(&form)
+	loc := func() (loc *time.Location) {
+			tz, ok := syscall.Getenv("TZ")
+			if ok && tz != "" {
+				var err error
+				loc, err = time.LoadLocation(tz)
+				if err == nil {
+					return loc
+				}
+			}
+			return new(time.Location)
+		}()
+
+	f.location.Store(loc)
+
+
+	buf := f.newBuffer(len(f.GetFormat()) + 10)
+	f.ft.Store(&buf)
 
 	return f.refresh()
 }
@@ -107,7 +103,7 @@ func (f *fastime) newBuffer(max int) (b []byte) {
 }
 
 func (f *fastime) store(t time.Time) *fastime {
-	f.t.Store(t)
+	f.t.Store(&t)
 	f.formatValid.Store(false)
 	ut := t.Unix()
 	unt := t.UnixNano()
@@ -123,15 +119,15 @@ func (f *fastime) IsDaemonRunning() bool {
 }
 
 func (f *fastime) GetLocation() *time.Location {
-	l := f.location.Load()
-	if l == nil {
+	loc := f.location.Load()
+	if loc == nil {
 		return nil
 	}
-	return l.(*time.Location)
+	return loc
 }
 
 func (f *fastime) GetFormat() string {
-	return f.format.Load().(string)
+	return *f.format.Load()
 }
 
 // SetLocation replaces time location
@@ -146,7 +142,7 @@ func (f *fastime) SetLocation(location *time.Location) Fastime {
 
 // SetFormat replaces time format
 func (f *fastime) SetFormat(format string) Fastime {
-	f.format.Store(format)
+	f.format.Store(&format)
 	f.formatValid.Store(false)
 	f.refresh()
 	return f
@@ -154,7 +150,7 @@ func (f *fastime) SetFormat(format string) Fastime {
 
 // Now returns current time
 func (f *fastime) Now() time.Time {
-	return f.t.Load().(time.Time)
+	return *f.t.Load()
 }
 
 // Stop stops stopping time refresh daemon
@@ -200,9 +196,10 @@ func (f *fastime) FormattedNow() []byte {
 	// only update formatted value on swap
 	if f.formatValid.CompareAndSwap(false, true) {
 		form := f.GetFormat()
-		f.ft.Store(f.Now().AppendFormat(f.newBuffer(len(form)+10), form))
+		buf := f.Now().AppendFormat(f.newBuffer(len(form)+10), form)
+		f.ft.Store(&buf)
 	}
-	return f.ft.Load().([]byte)
+	return *f.ft.Load()
 }
 
 // StartTimerD provides time refresh daemon

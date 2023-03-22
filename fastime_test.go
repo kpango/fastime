@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 	"reflect"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -101,7 +100,6 @@ func TestStartStop(t *testing.T) {
 
 func TestFastime_Now(t *testing.T) {
 	type fields struct {
-		t      atomic.Value
 		cancel context.CancelFunc
 	}
 	tests := []struct {
@@ -125,7 +123,6 @@ func TestFastime_Now(t *testing.T) {
 
 func TestFastime_Stop(t *testing.T) {
 	type fields struct {
-		t      atomic.Value
 		cancel context.CancelFunc
 	}
 	tests := []struct {
