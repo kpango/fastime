@@ -29,11 +29,11 @@ type Fastime interface {
 
 // Fastime is fastime's base struct, it's stores atomic time object
 type fastime struct {
-	uut           uint32
-	uunt          uint32
-	dur           int64
-	ut            int64
-	unt           int64
+	uut           atomic.Uint32
+	uunt          atomic.Uint32
+	dur           atomic.Int64
+	ut            atomic.Int64
+	unt           atomic.Int64
 	correctionDur time.Duration
 	mu            sync.Mutex
 	wg            sync.WaitGroup
@@ -57,12 +57,12 @@ func New() (f Fastime) {
 
 func newFastime() (f *fastime) {
 	f = &fastime{
-		ut:            math.MaxInt64,
-		unt:           math.MaxInt64,
-		uut:           math.MaxUint32,
-		uunt:          math.MaxUint32,
 		correctionDur: time.Millisecond * 100,
 	}
+	f.ut.Store(math.MaxInt64)
+	f.unt.Store(math.MaxInt64)
+	f.uut.Store(math.MaxUint32)
+	f.uunt.Store(math.MaxUint32)
 
 	form := time.RFC3339
 	f.format.Store(&form)
@@ -87,7 +87,7 @@ func newFastime() (f *fastime) {
 }
 
 func (f *fastime) update() (ft *fastime) {
-	return f.store(f.Now().Add(time.Duration(atomic.LoadInt64(&f.dur))))
+	return f.store(f.Now().Add(time.Duration(f.dur.Load())))
 }
 
 func (f *fastime) refresh() (ft *fastime) {
@@ -109,10 +109,10 @@ func (f *fastime) store(t time.Time) (ft *fastime) {
 	f.formatValid.Store(false)
 	ut := t.Unix()
 	unt := t.UnixNano()
-	atomic.StoreInt64(&f.ut, ut)
-	atomic.StoreInt64(&f.unt, unt)
-	atomic.StoreUint32(&f.uut, *(*uint32)(unsafe.Pointer(&ut)))
-	atomic.StoreUint32(&f.uunt, *(*uint32)(unsafe.Pointer(&unt)))
+	f.ut.Store(ut)
+	f.unt.Store(unt)
+	f.uut.Store(*(*uint32)(unsafe.Pointer(&ut)))
+	f.uunt.Store(*(*uint32)(unsafe.Pointer(&unt)))
 	return f
 }
 
@@ -164,7 +164,7 @@ func (f *fastime) Stop() {
 
 func (f *fastime) stop() {
 	if f.IsDaemonRunning() {
-		atomic.StoreInt64(&f.dur, 0)
+		f.dur.Store(0)
 	}
 	f.wg.Wait()
 }
@@ -175,22 +175,22 @@ func (f *fastime) Since(t time.Time) (dur time.Duration) {
 
 // UnixNow returns current unix time
 func (f *fastime) UnixNow() (now int64) {
-	return atomic.LoadInt64(&f.ut)
+	return f.ut.Load()
 }
 
 // UnixNow returns current unix time
 func (f *fastime) UnixUNow() (now uint32) {
-	return atomic.LoadUint32(&f.uut)
+	return f.uut.Load()
 }
 
 // UnixNanoNow returns current unix nano time
 func (f *fastime) UnixNanoNow() (now int64) {
-	return atomic.LoadInt64(&f.unt)
+	return f.unt.Load()
 }
 
 // UnixNanoNow returns current unix nano time
 func (f *fastime) UnixUNanoNow() (now uint32) {
-	return atomic.LoadUint32(&f.uunt)
+	return f.uunt.Load()
 }
 
 // FormattedNow returns formatted byte time
@@ -213,9 +213,8 @@ func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) (ft Fastim
 		f.stop()
 	}
 	f.running.Store(true)
-	f.dur = math.MaxInt64
-	atomic.StoreInt64(&f.dur, dur.Nanoseconds())
-	ticker := time.NewTicker(time.Duration(atomic.LoadInt64(&f.dur)))
+	f.dur.Store(dur.Nanoseconds())
+	ticker := time.NewTicker(time.Duration(f.dur.Load()))
 	lastCorrection := f.now()
 	f.wg.Add(1)
 	f.refresh()
@@ -227,19 +226,23 @@ func (f *fastime) StartTimerD(ctx context.Context, dur time.Duration) (ft Fastim
 			ticker.Stop()
 			f.wg.Done()
 		}()
-		for atomic.LoadInt64(&f.dur) > 0 {
-			t := <-ticker.C
-			// rely on ticker for approximation
-			if t.Sub(lastCorrection) < f.correctionDur {
-				f.update()
-			} else { // correct the system time at a fixed interval
-				select {
-				case <-ctx.Done():
-					return
-				default:
+		for f.dur.Load() > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case t := <-ticker.C:
+				// rely on ticker for approximation
+				if t.Sub(lastCorrection) < f.correctionDur {
+					f.update()
+				} else { // correct the system time at a fixed interval
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+					f.refresh()
+					lastCorrection = t
 				}
-				f.refresh()
-				lastCorrection = t
 			}
 		}
 	}()

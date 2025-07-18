@@ -63,7 +63,7 @@ lint:
 	gometalinter --enable-all . | rg -v comment
 
 test: clean
-	GO111MODULE=on go test --race -v $(go list ./... | rg -v vendor)
+	GO111MODULE=on go test --race -timeout 1h -v $(go list ./... | rg -v vendor)
 
 contributors:
 	git log --format='%aN <%aE>' | sort -fu > CONTRIBUTORS
@@ -76,3 +76,6 @@ format:
 	find ./ -type d -name .git -prune -o -type f -regex '.*[^\.pb]\.go' -print | xargs $(GOPATH)/bin/gofumpt -w
 	find ./ -type d -name .git -prune -o -type f -regex '.*[^\.pb]\.go' -print | xargs $(GOPATH)/bin/strictgoimports -w
 	find ./ -type d -name .git -prune -o -type f -regex '.*\.go' -print | xargs $(GOPATH)/bin/goimports -w
+
+contributors:
+	git log --format='%aN <%aE>' | sort -fu > CONTRIBUTORS

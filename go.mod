@@ -1,3 +1,3 @@
 module github.com/kpango/fastime
 
-go 1.20
+go 1.24.4
